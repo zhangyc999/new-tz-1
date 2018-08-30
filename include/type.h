@@ -16,6 +16,6 @@ typedef   signed long long int s64;
 typedef float  f32;
 typedef double f64;
 
-typedef char *str;
+typedef char * str;
 
 #endif /* TYPE_H_ */
