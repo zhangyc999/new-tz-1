@@ -9,7 +9,6 @@ astyle                \
 --unpad-paren         \
 --delete-empty-lines  \
 --lineend=linux       \
---remove-braces       \
 --convert-tabs        \
 --mode=c              \
 --suffix=none         \
