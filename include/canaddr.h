@@ -4,8 +4,8 @@
 #define CA_MAIN 0x0C /* MAIN controller                              */
 #define CA_TLS0 0x16 /* TiLt Sensor for levelling                    */
 #define CA_TLS1 0x19 /* TiLt Sensor for levelling as backup          */
-#define CA_VSLF 0x13 /* ViSual Locator on the Front                  */
-#define CA_VSLB 0x15 /* ViSual Locator on the Back                   */
+#define CA_VSL0 0x13 /* ViSual Locator on the front                  */
+#define CA_VSL1 0x15 /* ViSual Locator on the back                   */
 #define CA_GEND 0x52 /* GENerator of Diesel                          */
 #define CA_GENS 0x66 /* GENerator of Shaft                           */
 #define CA_PSU  0x73 /* Power Supply Unit                            */
@@ -25,14 +25,14 @@
 #define CA_PRP1 0x33 /* PRoP on the back left                        */
 #define CA_PRP2 0x36 /* PRoP on the back right                       */
 #define CA_PRP3 0x35 /* PRoP on the front right                      */
-#define CA_FX   0x2F /* crane on the Front for X-axis                */
-#define CA_BX   0x2C /* crane on the Back for X-axis                 */
-#define CA_FY0  0x2A /* crane on the Front for Y-axis outside        */
-#define CA_FY1  0x29 /* crane on the Front for Y-axis inside         */
-#define CA_BY0  0x25 /* crane on the Back for Y-axis inside          */
-#define CA_BY1  0x26 /* crane on the Back for Y-axis outside         */
-#define CA_FZ   0x23 /* crane on the Front for Z-axis                */
-#define CA_BZ   0x20 /* crane on the Back for Z-axis                 */
+#define CA_X0   0x2F /* crane on the front for X-axis                */
+#define CA_X1   0x2C /* crane on the back for X-axis                 */
+#define CA_Y0   0x2A /* crane on the front for Y-axis outside        */
+#define CA_Y1   0x29 /* crane on the front for Y-axis inside         */
+#define CA_Y2   0x25 /* crane on the back for Y-axis inside          */
+#define CA_Y3   0x26 /* crane on the back for Y-axis outside         */
+#define CA_Z0   0x23 /* crane on the front for Z-axis                */
+#define CA_Z1   0x20 /* crane on the back for Z-axis                 */
 #define CA_MOM0 0x83 /* MOMent electric machinery on the front left  */
 #define CA_MOM1 0x85 /* MOMent electric machinery on the back left   */
 #define CA_MOM2 0x89 /* MOMent electric machinery on the back right  */
