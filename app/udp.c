@@ -1,18 +1,22 @@
 #include "can.h"
 #include "canaddr.h"
+#include "flag.h"
 #include "type.h"
 #include "udp.h"
 #include "vx.h"
 
-extern void t_udp_rx(int prio_low, int prio_high, int period_slow, int period_fast, int fd);
-extern void t_udp_tx(int prio_low, int prio_high, int period_slow, int period_fast, int fd);
+extern void t_udp_rx(int period, int fd);
+extern void t_udp_tx(int period, int fd);
 
 extern int tid_can;
 
 extern MSG_Q_ID msg_core;
 extern MSG_Q_ID msg_udp;
 
-extern u32 sys_flag[50];
+extern SYS_FLAG flag;
+
+int tid_udp_rx;
+int tid_udp_tx;
 
 static int id2index(u8 id);
 
@@ -35,58 +39,49 @@ void udp_server(void)
         group.imr_interface.s_addr = inet_addr(SERVER_ADDRESS);
         routeAdd(GROUP_ADDRESS, SERVER_ADDRESS);
         setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group));
-        taskSpawn("UDP_RX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_rx, 90, 40, 10, 10, fd, 0, 0, 0, 0, 0);
-        taskSpawn("UDP_TX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_tx, 90, 40, 10, 10, fd, 0, 0, 0, 0, 0);
+        tid_udp_rx = taskSpawn("UDP_RX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_rx, 10, fd, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_udp_tx = taskSpawn("UDP_TX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_tx, 10, fd, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
-void t_udp_rx(int prio_low, int prio_high, int period_slow, int period_fast, int fd)
+void t_udp_rx(int period, int fd)
 {
-        int tid = taskIdSelf();
-        int period = period_slow;
         int i;
         struct sockaddr_in server;
         int size = sizeof(struct sockaddr_in);
-        int rx[2] = {0};
         UDP_RX buf[16];
-        UDP_RX *plst;
+        UDP_RX *p;
         LIST lst;
         lstInit(&lst);
         for (i = 0; i < 16; i++)
                 lstAdd(&lst, (NODE *)&buf[i]);
-        for (i = 0; i < 16; i++)
-                lstAdd(&lst, (NODE *)&buf[i]);
         lstFirst(&lst)->previous = lstLast(&lst);
         lstLast(&lst)->next = lstFirst(&lst);
-        plst = (UDP_RX *)lstFirst(&lst);
+        p = (UDP_RX *)lstFirst(&lst);
         for (;;) {
                 taskDelay(period);
-                while (ERROR != recvfrom(fd, (str)&plst + sizeof(NODE), sizeof(*plst) - sizeof(NODE) - 4, 0, (struct sockaddr *)&server, &size)) {
-                        if (plst->head == 0x12345678) {
-                                plst->ts = tickGet();
-                                plst = (UDP_RX *)lstNext((NODE *)plst);
+                while (ERROR != recvfrom(fd, (str)&p->head, sizeof(*p) - sizeof(NODE) - 4, 0, (struct sockaddr *)&server, &size)) {
+                        if (p->head == 0x0000FEC1) {
+                                p->ts = tickGet();
+                                p = (UDP_RX *)lstNext((NODE *)p);
                         }
                 }
-                plst = (UDP_RX *)lstPrevious((NODE *)plst);
-                if (tickGet() - plst->ts >= 0 && tickGet() - plst->ts < period) {
-                        if (plst->cmd[0] == ((UDP_RX *)lstPrevious((NODE *)plst))->cmd[0] &&
-                            plst->cmd[1] == ((UDP_RX *)lstPrevious((NODE *)plst))->cmd[1]) {
-                                rx[0] = tid;
-                                rx[1] = (int)plst;
-                                msgQSend(msg_core, (str)rx, 8, NO_WAIT, MSG_PRI_NORMAL);
+                p = (UDP_RX *)lstPrevious((NODE *)p);
+                if (tickGet() - p->ts >= 0 && tickGet() - p->ts < period) {
+                        if (p->cmd[0] == ((UDP_RX *)lstPrevious((NODE *)p))->cmd[0] &&
+                            p->cmd[1] == ((UDP_RX *)lstPrevious((NODE *)p))->cmd[1]) {
+                                msgQSend(msg_core, (str)p, sizeof(*p), NO_WAIT, MSG_PRI_NORMAL);
                         }
                 }
         }
 }
 
-void t_udp_tx(int prio_low, int prio_high, int period_slow, int period_fast, int fd)
+void t_udp_tx(int period, int fd)
 {
-        int tid = taskIdSelf();
-        int period = period_slow;
         struct sockaddr_in client;
         int size = sizeof(struct sockaddr_in);
-        UDP_TX tx;
-        int can[2] = {0};
         int index = 0;
+        CAN buf;
+        UDP_TX tx;
         client.sin_len = (u_char)size;
         client.sin_family = AF_INET;
         client.sin_port = htons(CLIENT_PORT);
@@ -95,17 +90,13 @@ void t_udp_tx(int prio_low, int prio_high, int period_slow, int period_fast, int
         tx.head = 0xC7FEC7FE;
         for (;;) {
                 taskDelay(period);
-                while (ERROR != msgQReceive(msg_udp, (str)can, 8, NO_WAIT)) {
-                        if (can[0] == tid_can) {
-                                index = id2index(((CAN *)can[1])->id[0]);
-                                if (index > 0 && index < 50)
-                                        memcpy((u8 *)tx.can + (index - 1) * (sizeof(CAN) - sizeof(NODE)),
-                                               (u8 *)can[1] + sizeof(NODE),
-                                               sizeof(CAN) - sizeof(NODE));
-                        }
+                while (ERROR != msgQReceive(msg_udp, (str)&buf, sizeof(buf), NO_WAIT)) {
+                        index = id2index(buf.id[0]);
+                        if (index > 0 && index < 50)
+                                memcpy((u8 *)tx.can + (index - 1) * (sizeof(CAN) - sizeof(NODE)),
+                                       buf.id, sizeof(CAN) - sizeof(NODE) - 4);
                 }
-                memcpy(tx.flag, sys_flag, sizeof(sys_flag));
-                tx.ts = tickGet();
+                memcpy(tx.flag, &flag, sizeof(flag));
                 sendto(fd, (caddr_t)&tx, sizeof(tx), 0, (struct sockaddr *)&client, size);
         }
 }
