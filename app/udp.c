@@ -5,8 +5,8 @@
 #include "udp.h"
 #include "vx.h"
 
-extern void t_udp_rx(int period, int fd);
-extern void t_udp_tx(int period, int fd);
+extern void t_udp_rx(int fd);
+extern void t_udp_tx(int fd);
 
 extern int tid_can;
 
@@ -22,13 +22,11 @@ static int id2index(u8 id);
 
 void udp_server(void)
 {
-        struct sockaddr_in server;
-        struct ip_mreq group;
-        int size = sizeof(struct sockaddr_in);
-        int fd = socket(AF_INET, SOCK_DGRAM, 0);
-        int offset = 0;
+        static struct sockaddr_in server;
+        static struct ip_mreq group;
+        static int size = sizeof(struct sockaddr_in);
+        static int fd = socket(AF_INET, SOCK_DGRAM, 0);
         /* u_long mode = 1; */
-        bzero((char *)&server, size);
         server.sin_len = (u_char)size;
         server.sin_family = AF_INET;
         server.sin_port = htons(SERVER_PORT);
@@ -39,18 +37,19 @@ void udp_server(void)
         group.imr_interface.s_addr = inet_addr(SERVER_ADDRESS);
         routeAdd(GROUP_ADDRESS, SERVER_ADDRESS);
         setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group));
-        tid_udp_rx = taskSpawn("UDP_RX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_rx, 10, fd, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_udp_tx = taskSpawn("UDP_TX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_tx, 10, fd, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_udp_rx = taskSpawn("UDP_RX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_rx, fd, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_udp_tx = taskSpawn("UDP_TX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_tx, fd, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
-void t_udp_rx(int period, int fd)
+void t_udp_rx(int fd)
 {
-        int i;
-        struct sockaddr_in server;
-        int size = sizeof(struct sockaddr_in);
-        UDP_RX buf[16];
-        UDP_RX *p;
-        LIST lst;
+        static int period = sysClkRateGet() / 10;
+        static struct sockaddr_in server;
+        static int size = sizeof(struct sockaddr_in);
+        static int i;
+        static UDP_RX buf[16];
+        static UDP_RX *p;
+        static LIST lst;
         lstInit(&lst);
         for (i = 0; i < 16; i++)
                 lstAdd(&lst, (NODE *)&buf[i]);
@@ -75,18 +74,18 @@ void t_udp_rx(int period, int fd)
         }
 }
 
-void t_udp_tx(int period, int fd)
+void t_udp_tx(int fd)
 {
-        struct sockaddr_in client;
-        int size = sizeof(struct sockaddr_in);
-        int index = 0;
-        CAN buf;
-        UDP_TX tx;
+        static int period = sysClkRateGet() / 10;
+        static struct sockaddr_in client;
+        static int size = sizeof(struct sockaddr_in);
+        static int index;
+        static CAN buf;
+        static UDP_TX tx;
         client.sin_len = (u_char)size;
         client.sin_family = AF_INET;
         client.sin_port = htons(CLIENT_PORT);
         client.sin_addr.s_addr = inet_addr(GROUP_ADDRESS);
-        bzero((char *)&tx, sizeof(tx));
         tx.head = 0xC7FEC7FE;
         for (;;) {
                 taskDelay(period);
@@ -103,7 +102,7 @@ void t_udp_tx(int period, int fd)
 
 static int id2index(u8 id)
 {
-        static int index[255] = {0};
+        static int index[255];
         index[CA_TLS0] = 3;
         index[CA_TLS1] = 4;
         index[CA_VSL0] = 1;

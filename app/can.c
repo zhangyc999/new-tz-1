@@ -68,8 +68,8 @@ static MSG_Q_ID id2msg(u8 id);
 
 void t_can(int period)
 {
-        int i = 0;
-        CAN buf;
+        static int i;
+        static CAN buf;
         init0();
         init1();
         for (;;) {
@@ -105,7 +105,7 @@ void t_can(int period)
 static void isr0(void)
 {
         static CAN buf;
-        MSG_Q_ID msg = 0;
+        static MSG_Q_ID msg;
         if (READ_REG_BYTE(ADDR(0), PELI_IR) != 0x01 ||
             (READ_REG_BYTE(ADDR(0), PELI_SR) & 0x03) != 0x01 ||
             READ_REG_BYTE(ADDR(0), PELI_RXB(0)) != CAN_FF) {
@@ -140,7 +140,7 @@ static void isr0(void)
 static void isr1(void)
 {
         static CAN buf;
-        MSG_Q_ID msg = 0;
+        static MSG_Q_ID msg;
         if (READ_REG_BYTE(ADDR(1), PELI_IR) != 0x01 ||
             (READ_REG_BYTE(ADDR(1), PELI_SR) & 0x03) != 0x01 ||
             READ_REG_BYTE(ADDR(1), PELI_RXB(0)) != CAN_FF) {
@@ -222,7 +222,7 @@ static void init1(void)
 
 static MSG_Q_ID id2msg(u8 id)
 {
-        static MSG_Q_ID msg[255] = {0};
+        static MSG_Q_ID msg[255];
         msg[CA_TLS0] = msg_tls;
         msg[CA_TLS1] = msg_tls;
         msg[CA_VSL0] = msg_vsl;
