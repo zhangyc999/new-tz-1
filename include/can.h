@@ -17,4 +17,9 @@ typedef struct ext_can {
 #define CAN_DLC 8
 #define CAN_FF  (CAN_EFF << 7 | CAN_RTR << 6 | CAN_DLC)
 
+typedef struct ecu {
+        u8 index;
+        MSG_Q_ID;
+} ECU;
+
 #endif /* CAN_H_ */
