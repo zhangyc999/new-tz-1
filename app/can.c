@@ -54,8 +54,12 @@ extern MSG_Q_ID msg_swh;
 extern MSG_Q_ID msg_rse;
 extern MSG_Q_ID msg_swv;
 extern MSG_Q_ID msg_prp;
-extern MSG_Q_ID msg_sdt;
 extern MSG_Q_ID msg_xyz;
+extern MSG_Q_ID msg_sdt;
+extern MSG_Q_ID msg_sds;
+extern MSG_Q_ID msg_sdfb;
+extern MSG_Q_ID msg_mom;
+extern MSG_Q_ID msg_gen;
 
 static void isr0(void);
 static void isr1(void);
