@@ -55,13 +55,11 @@ extern MSG_Q_ID msg_rse;
 extern MSG_Q_ID msg_swv;
 extern MSG_Q_ID msg_prp;
 extern MSG_Q_ID msg_xyz;
-extern MSG_Q_ID msg_sdt;
-extern MSG_Q_ID msg_sds;
-extern MSG_Q_ID msg_sdfb;
+extern MSG_Q_ID msg_shd;
 extern MSG_Q_ID msg_mom;
 extern MSG_Q_ID msg_gen;
 
-const extern ECU sys_ecu[255];
+extern ECU sys_ecu[255];
 
 static void isr0(void);
 static void isr1(void);
@@ -122,7 +120,7 @@ static void isr0(void)
         buf.id[1] = READ_REG_BYTE(ADDR(0), PELI_RXB(3));
         buf.id[0] = READ_REG_BYTE(ADDR(0), PELI_RXB(4));
         *(u32 *)&buf.id[0] >>= 3;
-        msg = sys_ecu(buf.id[0])->msg;
+        msg = sys_ecu[buf.id[0]]->msg;
         if (!msg || buf.id[1] != CA_MAIN) {
                 WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
                 return;
@@ -155,7 +153,7 @@ static void isr1(void)
         buf.id[1] = READ_REG_BYTE(ADDR(1), PELI_RXB(3));
         buf.id[0] = READ_REG_BYTE(ADDR(1), PELI_RXB(4));
         *(u32 *)&buf.id[0] >>= 3;
-        msg = sys_ecu(buf.id[0])->msg;
+        msg = sys_ecu[buf.id[0]]->msg;
         if (!msg || buf.id[1] != CA_MAIN) {
                 WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);
                 return;

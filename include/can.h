@@ -4,12 +4,14 @@
 #include "type.h"
 #include "vx.h"
 
-typedef struct ext_can {
+struct ext_can {
         NODE node;
         u32 ts;
         u8 id[4];
         u8 data[8];
-} CAN;
+};
+
+typedef struct ext_can CAN;
 
 #define CAN_SFF 0
 #define CAN_EFF 1
@@ -17,7 +19,7 @@ typedef struct ext_can {
 #define CAN_DLC 8
 #define CAN_FF  (CAN_EFF << 7 | CAN_RTR << 6 | CAN_DLC)
 
-typedef struct ecu {
+typedef struct {
         u8 index;
         MSG_Q_ID;
 } ECU;
