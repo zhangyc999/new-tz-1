@@ -1,24 +1,13 @@
 #include "can.h"
 #include "canaddr.h"
-#include "flag.h"
 #include "type.h"
 #include "udp.h"
 #include "vx.h"
 
-extern void t_udp_rx(int fd);
-extern void t_udp_tx(int fd);
-
-extern int tid_can;
-
 extern MSG_Q_ID msg_core;
-extern MSG_Q_ID msg_udp;
 
-extern SYS_FLAG flag;
-
-int tid_udp_rx;
-int tid_udp_tx;
-
-static int id2index(u8 id);
+void t_udp_rx(int fd);
+void t_udp_tx(int fd);
 
 void udp_server(void)
 {
@@ -36,9 +25,9 @@ void udp_server(void)
         group.imr_multiaddr.s_addr = inet_addr(GROUP_ADDRESS);
         group.imr_interface.s_addr = inet_addr(SERVER_ADDRESS);
         routeAdd(GROUP_ADDRESS, SERVER_ADDRESS);
-        setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group));
-        tid_udp_rx = taskSpawn("UDP_RX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_rx, fd, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_udp_tx = taskSpawn("UDP_TX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_tx, fd, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (str)&group, sizeof(group));
+        taskSpawn("UDP_RX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_rx, fd, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        taskSpawn("UDP_TX", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udp_tx, fd, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void t_udp_rx(int fd)
@@ -98,44 +87,4 @@ void t_udp_tx(int fd)
                 memcpy(tx.flag, &flag, sizeof(flag));
                 sendto(fd, (caddr_t)&tx, sizeof(tx), 0, (struct sockaddr *)&client, size);
         }
-}
-
-static int id2index(u8 id)
-{
-        static int index[255];
-        index[CA_TLS0] = 3;
-        index[CA_TLS1] = 4;
-        index[CA_VSL0] = 1;
-        index[CA_VSL1] = 2;
-        index[CA_PSU] = 31;
-        index[CA_MOM0] = 33;
-        index[CA_MOM1] = 34;
-        index[CA_MOM2] = 35;
-        index[CA_MOM3] = 36;
-        index[CA_SWH0] = 25;
-        index[CA_SWH1] = 26;
-        index[CA_SWH2] = 27;
-        index[CA_SWH3] = 28;
-        index[CA_RSE0] = 17;
-        index[CA_RSE1] = 18;
-        index[CA_RSE2] = 19;
-        index[CA_RSE3] = 20;
-        index[CA_SWV0] = 21;
-        index[CA_SWV1] = 22;
-        index[CA_SWV2] = 23;
-        index[CA_SWV3] = 24;
-        index[CA_PRP0] = 13;
-        index[CA_PRP1] = 14;
-        index[CA_PRP2] = 15;
-        index[CA_PRP3] = 16;
-        index[CA_SDT] = 37;
-        index[CA_X0] = 11;
-        index[CA_X1] = 12;
-        index[CA_Y0] = 7;
-        index[CA_Y1] = 8;
-        index[CA_Y2] = 9;
-        index[CA_Y3] = 10;
-        index[CA_Z0] = 5;
-        index[CA_Z1] = 6;
-        return index[id];
 }

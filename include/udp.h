@@ -11,7 +11,7 @@ typedef struct {
         u16 head;
         u16 len;
         CMD cmd;
-} UDP_RX;
+} UDP;
 
 #define SERVER_ADDRESS "192.168.100.130"
 #define GROUP_ADDRESS "234.1.1.9"

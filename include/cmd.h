@@ -14,8 +14,22 @@ typedef struct {
         u8 act;
         union {
                 str data;
-                u32 tls;
-                u32 vsl;
+                struct {
+                        u8 relx: 2;
+                        u8 : 6;
+                        u8 res;
+                        u16 valid;
+                } tls;
+                struct {
+                        u8 relx_x0: 2;
+                        u8 relx_x1: 2;
+                        u8 relx_y01: 2;
+                        u8 relx_y23: 2;
+                        u8 relx_z0: 2;
+                        u8 relx_z1: 2;
+                        u8 res: 4;
+                        u16 valid;
+                } vsl;
                 struct {
                         u32 : 8;
                         u32 : 1;
@@ -37,18 +51,20 @@ typedef struct {
                         u32 : 1;
                 } psu;
                 struct {
-                        u8 res;
-                        u8 exp_vel;
-                        u16 choose;
+                        u8 relx_ampr: 2;
+                        u8 relx_sync: 2;
+                        u8 res: 4;
+                        u8 expt_vel;
+                        u16 valid;
                 } srv;
         } data;
 } CMD;
 
-#define CMD_SRC_IDLE 0x00
+#define CMD_IDLE 0x00
+
 #define CMD_SRC_UDP  0xec
 #define CMD_SRC_CORE 0xcc
 
-#define CMD_DEV_IDLE 0x00
 #define CMD_DEV_TLS  HAMMING_74(0x1)
 #define CMD_DEV_VSL  HAMMING_74(0x2)
 #define CMD_DEV_PSU  HAMMING_74(0x3)
@@ -62,27 +78,26 @@ typedef struct {
 #define CMD_DEV_GEN  HAMMING_74(0xb)
 #define CMD_SRV_ALL  HAMMING_74(0xc)
 
-#define CMD_MODE_IDLE   0x00
 #define CMD_MODE_STUPID HAMMING_74(0x1)
 #define CMD_MODE_MANUAL HAMMING_74(0x2)
 #define CMD_MODE_EXPERT HAMMING_74(0x3)
+#define CMD_SET_PASSWD  HAMMING_74(0x4)
+#define CMD_SET_ZERO    HAMMING_74(0x5)
+#define CMD_SET_SAVE    HAMMING_74(0x6)
 
-#define CMD_ACT_IDLE      0x00
-#define CMD_ACT_TLS       HAMMING_74(0x1)
-#define CMD_ACT_VSL_GET   HAMMING_74(0x2)
-#define CMD_ACT_VSL_PUT   HAMMING_74(0x3)
-#define CMD_ACT_VSL_JOINT HAMMING_74(0x4)
-#define CMD_ACT_PSU_OFF   HAMMING_74(0x5)
-#define CMD_ACT_PSU_ON    HAMMING_74(0x6)
-#define CMD_ACT_SRV_MIN   HAMMING_74(0x7)
-#define CMD_ACT_SRV_MAX   HAMMING_74(0x8)
-#define CMD_ACT_SRV_MIDA  HAMMING_74(0x9)
-#define CMD_ACT_SRV_MIDB  HAMMING_74(0xa)
-#define CMD_ACT_SRV_STOP  HAMMING_74(0xb)
+#define CMD_ACT_RELAX HAMMING_74(0x1)
 
-#define CMD_SET_IDLE   0x00
-#define CMD_SET_PASSWD HAMMING_74(0x1)
-#define CMD_SET_ZERO   HAMMING_74(0x2)
-#define CMD_SET_SAVE   HAMMING_74(0x3)
+#define CMD_ACT_VSL_GET   HAMMING_74(0x1)
+#define CMD_ACT_VSL_PUT   HAMMING_74(0x2)
+#define CMD_ACT_VSL_JOINT HAMMING_74(0x3)
+
+#define CMD_ACT_PSU_OFF   HAMMING_74(0x1)
+#define CMD_ACT_PSU_ON    HAMMING_74(0x2)
+
+#define CMD_ACT_SRV_MIN   HAMMING_74(0x1)
+#define CMD_ACT_SRV_MAX   HAMMING_74(0x2)
+#define CMD_ACT_SRV_MIDA  HAMMING_74(0x3)
+#define CMD_ACT_SRV_MIDB  HAMMING_74(0x4)
+#define CMD_ACT_SRV_STOP  HAMMING_74(0x5)
 
 #endif /* CMD_H_ */
