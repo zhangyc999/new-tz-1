@@ -68,8 +68,8 @@ static void init1(void);
 
 void t_can(int period)
 {
-        static int i;
-        static CAN buf;
+        CAN buf;
+        int i;
         init0();
         init1();
         for (;;) {
@@ -119,12 +119,6 @@ static void isr0(void)
         buf.id[2] = READ_REG_BYTE(ADDR(0), PELI_RXB(2));
         buf.id[1] = READ_REG_BYTE(ADDR(0), PELI_RXB(3));
         buf.id[0] = READ_REG_BYTE(ADDR(0), PELI_RXB(4));
-        *(u32 *)&buf.id[0] >>= 3;
-        msg = sys_ecu[buf.id[0]]->msg;
-        if (!msg || buf.id[1] != CA_MAIN) {
-                WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
-                return;
-        }
         buf.data[0] = READ_REG_BYTE(ADDR(0), PELI_RXB(5));
         buf.data[1] = READ_REG_BYTE(ADDR(0), PELI_RXB(6));
         buf.data[2] = READ_REG_BYTE(ADDR(0), PELI_RXB(7));
@@ -133,9 +127,13 @@ static void isr0(void)
         buf.data[5] = READ_REG_BYTE(ADDR(0), PELI_RXB(10));
         buf.data[6] = READ_REG_BYTE(ADDR(0), PELI_RXB(11));
         buf.data[7] = READ_REG_BYTE(ADDR(0), PELI_RXB(12));
+        *(u32 *)&buf.id[0] >>= 3;
+        msg = sys_ecu[buf.id[0]].msg;
+        if (buf.id[1] == CA_MAIN && msg) {
+                buf.ts = tickGet();
+                msgQSend(msg, (str)&buf, sizeof(buf), NO_WAIT, MSG_PRI_NORMAL);
+        }
         WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
-        buf.ts = tickGet();
-        msgQSend(msg, (str)&buf, sizeof(buf), NO_WAIT, MSG_PRI_NORMAL);
 }
 
 static void isr1(void)
@@ -152,12 +150,6 @@ static void isr1(void)
         buf.id[2] = READ_REG_BYTE(ADDR(1), PELI_RXB(2));
         buf.id[1] = READ_REG_BYTE(ADDR(1), PELI_RXB(3));
         buf.id[0] = READ_REG_BYTE(ADDR(1), PELI_RXB(4));
-        *(u32 *)&buf.id[0] >>= 3;
-        msg = sys_ecu[buf.id[0]]->msg;
-        if (!msg || buf.id[1] != CA_MAIN) {
-                WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);
-                return;
-        }
         buf.data[0] = READ_REG_BYTE(ADDR(1), PELI_RXB(5));
         buf.data[1] = READ_REG_BYTE(ADDR(1), PELI_RXB(6));
         buf.data[2] = READ_REG_BYTE(ADDR(1), PELI_RXB(7));
@@ -166,9 +158,13 @@ static void isr1(void)
         buf.data[5] = READ_REG_BYTE(ADDR(1), PELI_RXB(10));
         buf.data[6] = READ_REG_BYTE(ADDR(1), PELI_RXB(11));
         buf.data[7] = READ_REG_BYTE(ADDR(1), PELI_RXB(12));
+        *(u32 *)&buf.id[0] >>= 3;
+        msg = sys_ecu[buf.id[0]].msg;
+        if (buf.id[1] == CA_MAIN && msg) {
+                buf.ts = tickGet();
+                msgQSend(msg, (str)&buf, sizeof(buf), NO_WAIT, MSG_PRI_NORMAL);
+        }
         WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);
-        buf.ts = tickGet();
-        msgQSend(msg, (str)&buf, sizeof(buf), NO_WAIT, MSG_PRI_NORMAL);
 }
 
 static void init0(void)

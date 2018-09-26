@@ -21,7 +21,7 @@ typedef struct ext_can CAN;
 
 typedef struct {
         u8 index;
-        MSG_Q_ID;
+        MSG_Q_ID msg;
 } ECU;
 
 #endif /* CAN_H_ */

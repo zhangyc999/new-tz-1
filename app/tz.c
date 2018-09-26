@@ -1,7 +1,7 @@
 #include "can.h"
 #include "canaddr.h"
 #include "cmd.h"
-#include "type.h"
+#include "data.h"
 #include "vx.h"
 
 extern void t_core(void);
@@ -78,7 +78,7 @@ void tz(void)
         lstLibInit();
         ecu_init();
         sysClkRateSet(100);
-        tid_core = taskSpawn("CORE", 40, VX_FP_TASK, 20000, (FUNCPTR)t_core, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_core = taskSpawn("CRE", 99, VX_FP_TASK, 20000, (FUNCPTR)t_core, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_can = taskSpawn("CAN", 40, VX_FP_TASK, 20000, (FUNCPTR)t_can, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_tls = taskSpawn("TLS", 40, VX_FP_TASK, 20000, (FUNCPTR)t_tls, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_vsl = taskSpawn("VSL", 90, VX_FP_TASK, 20000, (FUNCPTR)t_vsl, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);

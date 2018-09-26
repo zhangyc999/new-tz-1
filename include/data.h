@@ -25,7 +25,7 @@ typedef struct {
                                 u8 code: 5;
                                 u8 level: 3;
                         } fault;
-                        u8 proc
+                        u8 proc;
                         u8 res[2];
                         s32 x;
                         s32 y;
