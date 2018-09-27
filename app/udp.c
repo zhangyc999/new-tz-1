@@ -1,9 +1,14 @@
 #include "can.h"
 #include "canaddr.h"
+#include "cmd.h"
 #include "data.h"
 #include "type.h"
-#include "udp.h"
 #include "vx.h"
+
+#define SERVER_ADDRESS "192.168.100.130"
+#define GROUP_ADDRESS "234.1.1.9"
+#define SERVER_PORT 4207
+#define CLIENT_PORT 4201
 
 extern MSG_Q_ID msg_core;
 
@@ -38,32 +43,32 @@ void t_udp_rx(int fd)
         int period = sysClkRateGet() / 10;
         struct sockaddr_in server;
         int size = sizeof(struct sockaddr_in);
+        int len = sizeof(CMD) - sizeof(NODE);
         int i;
-        UDP buf[16];
-        UDP *p;
+        CMD buf[64];
+        CMD *p;
         LIST lst;
-        int len = sizeof(*p) - sizeof(NODE) - 4;
         lstInit(&lst);
-        for (i = 0; i < 16; i++)
+        for (i = 0; i < 64; i++)
                 lstAdd(&lst, (NODE *)&buf[i]);
         lstFirst(&lst)->previous = lstLast(&lst);
         lstLast(&lst)->next = lstFirst(&lst);
-        p = (UDP *)lstFirst(&lst);
+        p = (CMD *)lstFirst(&lst);
         for (;;) {
                 taskDelay(period);
                 while (len == recvfrom(fd, (str)&p->head, len, 0, (struct sockaddr *)&server, &size)) {
                         if (p->head == 0xfec1 && p->len == len) {
                                 p->ts = tickGet();
-                                p = (UDP *)lstNext((NODE *)p);
+                                p = (CMD *)lstNext((NODE *)p);
                         }
                 }
-                p = (UDP *)lstPrevious((NODE *)p);
+                p = (CMD *)lstPrevious((NODE *)p);
                 if (tickGet() - p->ts >= 0 && tickGet() - p->ts < period) {
-                        if (p->cmd.src == ((UDP *)lstPrevious((NODE *)p))->cmd.src &&
-                            p->cmd.dev == ((UDP *)lstPrevious((NODE *)p))->cmd.dev &&
-                            p->cmd.mode == ((UDP *)lstPrevious((NODE *)p))->cmd.mode &&
-                            p->cmd.act == ((UDP *)lstPrevious((NODE *)p))->cmd.act)
-                                msgQSend(msg_core, (str)&p->cmd, sizeof(p->cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        if (p->src == ((CMD *)lstPrevious((NODE *)p))->src &&
+                            p->dev == ((CMD *)lstPrevious((NODE *)p))->dev &&
+                            p->mode == ((CMD *)lstPrevious((NODE *)p))->mode &&
+                            p->act == ((CMD *)lstPrevious((NODE *)p))->act)
+                                msgQSend(msg_core, (str)&p, 4, NO_WAIT, MSG_PRI_NORMAL);
                 }
         }
 }
@@ -77,11 +82,11 @@ void t_udp_tx(int fd)
         client.sin_family = AF_INET;
         client.sin_port = htons(CLIENT_PORT);
         client.sin_addr.s_addr = inet_addr(GROUP_ADDRESS);
-        sys_data.head = 0xC7FE;
-        sys_data.len = 800;
+        sys_data.head = 0xc7fe;
+        sys_data.len = sizeof(DATA);
         for (;;) {
                 taskDelay(period);
                 sys_data.ts = tickGet();
-                sendto(fd, (caddr_t)&sys_data, sizeof(sys_data), 0, (struct sockaddr *)&client, size);
+                sendto(fd, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, size);
         }
 }

@@ -8,6 +8,9 @@
 (x) << 4)
 
 typedef struct {
+        NODE node;
+        u16 head;
+        u16 len;
         u8 src;
         u8 dev;
         u8 mode;
@@ -59,6 +62,9 @@ typedef struct {
                         u16 valid;
                 } srv;
         } data;
+        u32 ts;
+        u8 res[3];
+        u8 chk;
 } CMD;
 
 #define CMD_IDLE 0x00

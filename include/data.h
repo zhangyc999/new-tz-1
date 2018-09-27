@@ -6,36 +6,34 @@
 typedef struct {
         u16 head;
         u16 len;
-        u32 ts;
         union {
                 str data;
                 struct {
-                        u32 ts;
                         struct {
-                                u8 code: 5;
-                                u8 level: 3;
+                                u8 code: 6;
+                                u8 level: 2;
                         } fault;
                         u8 res[7];
                         s32 x;
                         s32 y;
+                        u32 ts;
                 } tls;
                 struct {
-                        u32 ts;
                         struct {
-                                u8 code: 5;
-                                u8 level: 3;
+                                u8 code: 6;
+                                u8 level: 2;
                         } fault;
                         u8 proc;
                         u8 res[2];
                         s32 x;
                         s32 y;
                         s32 z;
+                        u32 ts;
                 } vsl;
                 struct {
-                        u32 ts;
                         struct {
-                                u8 code: 5;
-                                u8 level: 3;
+                                u8 code: 6;
+                                u8 level: 2;
                         } fault;
                         u8 res[7];
                         struct {
@@ -74,12 +72,12 @@ typedef struct {
                                 u32 xyzf: 1;
                                 u32 : 1;
                         } v500;
+                        u32 ts;
                 } psu;
                 struct {
-                        u32 ts;
                         struct {
-                                u8 code: 5;
-                                u8 level: 3;
+                                u8 code: 6;
+                                u8 level: 2;
                         } fault;
                         struct {
                                 u8 brake: 1;
@@ -101,8 +99,12 @@ typedef struct {
                         s32 pos;
                         s32 vel;
                         s32 ampr;
+                        u32 ts;
                 } srv;
         } dev[48];
+        u32 ts;
+        u8 res[3];
+        u8 chk;
 } DATA;
 
 #endif /* DATA_H_ */

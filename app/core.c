@@ -1,8 +1,8 @@
 #include "can.h"
 #include "canaddr.h"
+#include "cmd.h"
 #include "data.h"
 #include "type.h"
-#include "udp.h"
 #include "vx.h"
 
 extern int tid_swh;
@@ -70,7 +70,7 @@ void t_core(void)
         u8 mom1 = sys_ecu[CA_MOM1].index - 1;
         u8 mom2 = sys_ecu[CA_MOM2].index - 1;
         u8 mom3 = sys_ecu[CA_MOM3].index - 1;
-        CMD cmd;
+        CMD *cmd;
         for (;;) {
                 if (sys_data.dev[psu].psu.v24.leg0 && sys_data.dev[psu].psu.v500.leg0 &&
                     sys_data.dev[psu].psu.v24.leg1 && sys_data.dev[psu].psu.v500.leg1 &&
@@ -159,51 +159,51 @@ void t_core(void)
                         memset(&sys_data.dev[mom3].srv.fault, 0, 1);
                 }
         }
-        if (ERROR != msgQReceive(msg_core, (str)&cmd, sizeof(cmd), period)) {
-                switch (cmd.dev) {
+        if (ERROR != msgQReceive(msg_core, (str)&cmd, 4, period)) {
+                switch (cmd->dev) {
                 case CMD_DEV_TLS:
-                        msgQSend(msg_tls, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_tls, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_VSL:
-                        msgQSend(msg_vsl, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_vsl, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_PSU:
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SWH:
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swh, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swh, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_mom, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_RSE:
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_rse, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SWV:
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swv, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_PRP:
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_prp, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_XYZ:
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_xyz, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SHD:
-                        msgQSend(msg_psu, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_shd, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_SRV_ALL:
-                        msgQSend(msg_swh, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (str)&cmd, sizeof(cmd), NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swh, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_rse, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swv, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_prp, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_xyz, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_shd, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_mom, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 default:
                         break;

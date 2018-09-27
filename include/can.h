@@ -6,9 +6,9 @@
 
 struct ext_can {
         NODE node;
-        u32 ts;
         u8 id[4];
         u8 data[8];
+        u32 ts;
 };
 
 typedef struct ext_can CAN;
