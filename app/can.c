@@ -146,9 +146,9 @@ static void isr0(void)
         if (p_can[0]->id[1] == CA_MAIN && sys_ecu[p_can[0]->id[0]].msg) {
                 p_can[0]->ts = tickGet();
                 msgQSend(sys_ecu[p_can[0]->id[0]].msg, (str)&p_can[0], 4, NO_WAIT, MSG_PRI_NORMAL);
+                p_can[0] = (CAN *)lstNext((NODE *)p_can[0]);
         }
         WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
-        p_can[0] = (CAN *)lstNext((NODE *)p_can[0]);
 }
 
 static void isr1(void)
@@ -175,9 +175,9 @@ static void isr1(void)
         if (p_can[1]->id[1] == CA_MAIN && sys_ecu[p_can[1]->id[0]].msg) {
                 p_can[1]->ts = tickGet();
                 msgQSend(sys_ecu[p_can[1]->id[0]].msg, (str)&p_can[1], 4, NO_WAIT, MSG_PRI_NORMAL);
+                p_can[1] = (CAN *)lstNext((NODE *)p_can[1]);
         }
         WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);
-        p_can[1] = (CAN *)lstNext((NODE *)p_can[1]);
 }
 
 static void init0(void)

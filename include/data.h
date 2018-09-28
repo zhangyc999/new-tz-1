@@ -9,33 +9,24 @@ typedef struct {
         union {
                 str data;
                 struct {
-                        struct {
-                                u8 code: 6;
-                                u8 level: 2;
-                        } fault;
+                        s16 x;
+                        s16 y;
                         u8 res[7];
-                        s32 x;
-                        s32 y;
+                        u8 err;
+                        u32 errno;
                         u32 ts;
                 } tls;
                 struct {
-                        struct {
-                                u8 code: 6;
-                                u8 level: 2;
-                        } fault;
+                        s16 x;
+                        s16 y;
+                        s16 z;
                         u8 proc;
-                        u8 res[2];
-                        s32 x;
-                        s32 y;
-                        s32 z;
+                        u8 res[4];
+                        u8 err;
+                        u32 errno;
                         u32 ts;
                 } vsl;
                 struct {
-                        struct {
-                                u8 code: 6;
-                                u8 level: 2;
-                        } fault;
-                        u8 res[7];
                         struct {
                                 u32 : 8;
                                 u32 : 1;
@@ -72,13 +63,15 @@ typedef struct {
                                 u32 xyzf: 1;
                                 u32 : 1;
                         } v500;
+                        u8 res[3];
+                        u8 err;
+                        u32 errno;
                         u32 ts;
                 } psu;
                 struct {
-                        struct {
-                                u8 code: 6;
-                                u8 level: 2;
-                        } fault;
+                        s16 pos;
+                        s16 vel;
+                        s16 ampr;
                         struct {
                                 u8 brake: 1;
                                 u8 min: 1;
@@ -95,10 +88,9 @@ typedef struct {
                                 u8 loadn: 1;
                                 u8 lock: 1;
                         } misc;
-                        u8 res;
-                        s32 pos;
-                        s32 vel;
-                        s32 ampr;
+                        u8 res[3];
+                        u8 err;
+                        u32 errno;
                         u32 ts;
                 } srv;
         } dev[48];

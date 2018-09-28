@@ -21,15 +21,15 @@ void udp_server(void)
 {
         struct sockaddr_in server;
         struct ip_mreq group;
-        int size = sizeof(struct sockaddr_in);
+        int n = sizeof(struct sockaddr_in);
         int fd = socket(AF_INET, SOCK_DGRAM, 0);
         /* u_long mode = 1; */
-        server.sin_len = (u_char)size;
+        server.sin_len = (u_char)n;
         server.sin_family = AF_INET;
         server.sin_port = htons(SERVER_PORT);
         server.sin_addr.s_addr = htonl(INADDR_ANY);
         /* ioctl(fd, FIONBIO, (int)&mode); */
-        bind(fd, (struct sockaddr *)&server, size);
+        bind(fd, (struct sockaddr *)&server, n);
         group.imr_multiaddr.s_addr = inet_addr(GROUP_ADDRESS);
         group.imr_interface.s_addr = inet_addr(SERVER_ADDRESS);
         routeAdd(GROUP_ADDRESS, SERVER_ADDRESS);
@@ -42,7 +42,7 @@ void t_udp_rx(int fd)
 {
         int period = sysClkRateGet() / 10;
         struct sockaddr_in server;
-        int size = sizeof(struct sockaddr_in);
+        int n = sizeof(struct sockaddr_in);
         int len = sizeof(CMD) - sizeof(NODE);
         int i;
         CMD buf[64];
@@ -56,19 +56,14 @@ void t_udp_rx(int fd)
         p = (CMD *)lstFirst(&lst);
         for (;;) {
                 taskDelay(period);
-                while (len == recvfrom(fd, (str)&p->head, len, 0, (struct sockaddr *)&server, &size)) {
-                        if (p->head == 0xfec1 && p->len == len) {
-                                p->ts = tickGet();
-                                p = (CMD *)lstNext((NODE *)p);
-                        }
-                }
-                p = (CMD *)lstPrevious((NODE *)p);
-                if (tickGet() - p->ts >= 0 && tickGet() - p->ts < period) {
-                        if (p->src == ((CMD *)lstPrevious((NODE *)p))->src &&
-                            p->dev == ((CMD *)lstPrevious((NODE *)p))->dev &&
-                            p->mode == ((CMD *)lstPrevious((NODE *)p))->mode &&
-                            p->act == ((CMD *)lstPrevious((NODE *)p))->act)
-                                msgQSend(msg_core, (str)&p, 4, NO_WAIT, MSG_PRI_NORMAL);
+                if (len != recvfrom(fd, (str)&p->head, len, MSG_PEEK, (struct sockaddr *)&server, &n))
+                        continue;
+                while (len == recvfrom(fd, (str)&p->head, len, 0, (struct sockaddr *)&server, &n))
+                        ;
+                if (p->head == 0xfec1 && p->len == len) {
+                        p->ts = tickGet();
+                        msgQSend(msg_core, (str)&p, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        p = (CMD *)lstNext((NODE *)p);
                 }
         }
 }
@@ -77,8 +72,8 @@ void t_udp_tx(int fd)
 {
         int period = sysClkRateGet() / 10;
         struct sockaddr_in client;
-        int size = sizeof(struct sockaddr_in);
-        client.sin_len = (u_char)size;
+        int n = sizeof(struct sockaddr_in);
+        client.sin_len = (u_char)n;
         client.sin_family = AF_INET;
         client.sin_port = htons(CLIENT_PORT);
         client.sin_addr.s_addr = inet_addr(GROUP_ADDRESS);
@@ -87,6 +82,6 @@ void t_udp_tx(int fd)
         for (;;) {
                 taskDelay(period);
                 sys_data.ts = tickGet();
-                sendto(fd, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, size);
+                sendto(fd, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, n);
         }
 }

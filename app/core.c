@@ -159,7 +159,7 @@ void t_core(void)
                         memset(&sys_data.dev[mom3].srv.fault, 0, 1);
                 }
         }
-        if (ERROR != msgQReceive(msg_core, (str)&cmd, 4, period)) {
+        if (4 == msgQReceive(msg_core, (str)&cmd, 4, period)) {
                 switch (cmd->dev) {
                 case CMD_DEV_TLS:
                         msgQSend(msg_tls, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
