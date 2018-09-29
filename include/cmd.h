@@ -1,6 +1,9 @@
 #ifndef CMD_H_
 #define CMD_H_
 
+#include "type.h"
+#include "vx.h"
+
 #define HAMMING_74(x)                              \
 ((x) & 8 ^ ((x) & 4) << 1 ^ ((x) & 1) << 3 |       \
 ((x) & 8) >> 1 ^ ((x) & 2) << 1 ^ ((x) & 1) << 2 | \

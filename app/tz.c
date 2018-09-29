@@ -4,22 +4,25 @@
 #include "data.h"
 #include "vx.h"
 
-extern void t_core(void);
-extern void t_can(void);
-extern void t_tls(void);
-extern void t_vsl(void);
-extern void t_psu(void);
-extern void t_swh(void);
-extern void t_rse(void);
-extern void t_swv(void);
-extern void t_prp(void);
-extern void t_xyz(void);
-extern void t_shd(void);
-extern void t_mom(void);
-extern void t_dbg(void);
-extern void udp_server(void);
+extern void t_core(int period);
+extern void t_udpr(int period);
+extern void t_udpt(int period);
+extern void t_can(int period);
+extern void t_tls(int period);
+extern void t_vsl(int period);
+extern void t_psu(int period);
+extern void t_swh(int period);
+extern void t_rse(int period);
+extern void t_swv(int period);
+extern void t_prp(int period);
+extern void t_xyz(int period);
+extern void t_shd(int period);
+extern void t_mom(int period);
+extern void t_dbg(int period);
 
 int tid_core;
+int tid_udpr;
+int tid_udpt;
 int tid_can;
 int tid_tls;
 int tid_vsl;
@@ -32,7 +35,11 @@ int tid_xyz;
 int tid_shd;
 int tid_mom;
 int tid_dbg;
-
+int sfd_udp;
+int port_server = 4207;
+int port_client = 4201;
+str addr_server = "192.168.100.130";
+str addr_group = "192.168.100.130";
 MSG_Q_ID msg_core;
 MSG_Q_ID msg_can[2][3];
 MSG_Q_ID msg_tls;
@@ -47,51 +54,65 @@ MSG_Q_ID msg_shd;
 MSG_Q_ID msg_mom;
 MSG_Q_ID msg_gen;
 MSG_Q_ID msg_dbg;
-
 DATA sys_data;
-
 ECU sys_ecu[256];
 
 static void ecu_init(void);
 
 void tz(void)
 {
-        msg_core = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_can[0][0] = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_can[0][1] = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_can[0][2] = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_can[1][0] = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_can[1][1] = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_can[1][2] = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_tls = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_vsl = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_psu = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_swh = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_rse = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_swv = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_prp = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_xyz = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_shd = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_mom = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_gen = msgQCreate(128, 4, MSG_Q_FIFO);
-        msg_dbg = msgQCreate(128, 4, MSG_Q_FIFO);
+        int n = sizeof(struct sockaddr_in);
+        struct sockaddr_in server;
+        struct ip_mreq group;
+        /* u_long mode = 1; */
+        server.sin_len = (u_char)n;
+        server.sin_family = AF_INET;
+        server.sin_port = htons(port_server);
+        server.sin_addr.s_addr = htonl(INADDR_ANY);
+        group.imr_interface.s_addr = inet_addr(addr_server);
+        group.imr_multiaddr.s_addr = inet_addr(addr_group);
+        routeAdd(addr_group, addr_server);
+        sfd_udp = socket(AF_INET, SOCK_DGRAM, 0);
+        /* ioctl(sfd_udp, FIONBIO, (int)&mode); */
+        bind(sfd_udp, (struct sockaddr *)&server, n);
+        setsockopt(sfd_udp, IPPROTO_IP, IP_ADD_MEMBERSHIP, (str)&group, sizeof(group));
+        msg_core = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_can[0][0] = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_can[0][1] = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_can[0][2] = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_can[1][0] = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_can[1][1] = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_can[1][2] = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_tls = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_vsl = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_psu = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_swh = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_rse = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_swv = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_prp = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_xyz = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_shd = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_mom = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_gen = msgQCreate(128, 8, MSG_Q_FIFO);
+        msg_dbg = msgQCreate(128, 8, MSG_Q_FIFO);
         lstLibInit();
         ecu_init();
         sysClkRateSet(100);
-        tid_core = taskSpawn("CRE", 99, VX_FP_TASK, 20000, (FUNCPTR)t_core, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_can = taskSpawn("CAN", 40, VX_FP_TASK, 20000, (FUNCPTR)t_can, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_tls = taskSpawn("TLS", 40, VX_FP_TASK, 20000, (FUNCPTR)t_tls, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_vsl = taskSpawn("VSL", 90, VX_FP_TASK, 20000, (FUNCPTR)t_vsl, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_psu = taskSpawn("PSU", 90, VX_FP_TASK, 20000, (FUNCPTR)t_psu, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_swh = taskSpawn("SWH", 90, VX_FP_TASK, 20000, (FUNCPTR)t_swh, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_rse = taskSpawn("RSE", 90, VX_FP_TASK, 20000, (FUNCPTR)t_rse, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_swv = taskSpawn("SWV", 90, VX_FP_TASK, 20000, (FUNCPTR)t_swv, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_prp = taskSpawn("PRP", 90, VX_FP_TASK, 20000, (FUNCPTR)t_prp, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_xyz = taskSpawn("XYZ", 90, VX_FP_TASK, 20000, (FUNCPTR)t_xyz, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_shd = taskSpawn("SHD", 90, VX_FP_TASK, 20000, (FUNCPTR)t_shd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_mom = taskSpawn("MOM", 90, VX_FP_TASK, 20000, (FUNCPTR)t_mom, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_dbg = taskSpawn("DBG", 100, VX_FP_TASK, 20000, (FUNCPTR)t_dbg, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        udp_server();
+        tid_core = taskSpawn("CORE", 99, VX_FP_TASK, 20000, (FUNCPTR)t_core, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_udpr = taskSpawn("UDPR", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpr, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_udpt = taskSpawn("UDPT", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpt, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_can = taskSpawn("CAN", 40, VX_FP_TASK, 20000, (FUNCPTR)t_can, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_tls = taskSpawn("TLS", 40, VX_FP_TASK, 20000, (FUNCPTR)t_tls, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_vsl = taskSpawn("VSL", 90, VX_FP_TASK, 20000, (FUNCPTR)t_vsl, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_psu = taskSpawn("PSU", 90, VX_FP_TASK, 20000, (FUNCPTR)t_psu, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_swh = taskSpawn("SWH", 90, VX_FP_TASK, 20000, (FUNCPTR)t_swh, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_rse = taskSpawn("RSE", 90, VX_FP_TASK, 20000, (FUNCPTR)t_rse, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_swv = taskSpawn("SWV", 90, VX_FP_TASK, 20000, (FUNCPTR)t_swv, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_prp = taskSpawn("PRP", 90, VX_FP_TASK, 20000, (FUNCPTR)t_prp, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_xyz = taskSpawn("XYZ", 90, VX_FP_TASK, 20000, (FUNCPTR)t_xyz, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_shd = taskSpawn("SHD", 90, VX_FP_TASK, 20000, (FUNCPTR)t_shd, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_mom = taskSpawn("MOM", 90, VX_FP_TASK, 20000, (FUNCPTR)t_mom, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_dbg = taskSpawn("DBG", 100, VX_FP_TASK, 20000, (FUNCPTR)t_dbg, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 static void ecu_init(void)

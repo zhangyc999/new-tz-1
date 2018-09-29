@@ -139,7 +139,7 @@ typedef struct {
                         u8 brake: 1;
                         u8 min: 1;
                         u8 max: 1;
-                        u8 res: 5;
+                        u8 : 5;
                 } io;
                 struct {
                         u8 min: 1;
@@ -159,7 +159,12 @@ typedef struct {
                 u32 ts;
         } srv[41];
         u32 ts;
-        u8 res[3];
+        struct {
+                u8 bus0: 1;
+                u8 bus1: 1;
+                u8 : 6;
+        } fault;
+        u8 res[2];
         u8 chk;
 } DATA;
 

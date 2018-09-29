@@ -12,7 +12,6 @@ extern int tid_prp;
 extern int tid_xyz;
 extern int tid_shd;
 extern int tid_mom;
-
 extern MSG_Q_ID msg_core;
 extern MSG_Q_ID msg_tls;
 extern MSG_Q_ID msg_vsl;
@@ -24,14 +23,13 @@ extern MSG_Q_ID msg_prp;
 extern MSG_Q_ID msg_xyz;
 extern MSG_Q_ID msg_shd;
 extern MSG_Q_ID msg_mom;
-
 extern DATA sys_data;
-
 extern ECU sys_ecu[256];
 
-void t_core(void)
+void t_core(int period)
 {
-        int period = sysClkRateGet() / 20;
+        int recv[2];
+        int send[2] = {taskIdSelf(), 0};
         u8 swh0 = sys_ecu[CA_SWH0].index - 6;
         u8 swh1 = sys_ecu[CA_SWH1].index - 6;
         u8 swh2 = sys_ecu[CA_SWH2].index - 6;
@@ -158,51 +156,62 @@ void t_core(void)
                         memset(&sys_data.srv[mom3].fault, 0, 1);
                 }
         }
-        if (4 == msgQReceive(msg_core, (str)&cmd, 4, period)) {
+        if (8 == msgQReceive(msg_core, (str)recv, 8, period)) {
+                cmd = (CMD *)recv[1];
                 switch (cmd->dev) {
                 case CMD_DEV_TLS:
-                        msgQSend(msg_tls, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_tls, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_VSL:
-                        msgQSend(msg_vsl, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_vsl, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_PSU:
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SWH:
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swh, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swh, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_mom, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_RSE:
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_rse, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SWV:
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swv, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_PRP:
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_prp, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_XYZ:
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_xyz, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SHD:
-                        msgQSend(msg_psu, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_psu, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_shd, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_SRV_ALL:
-                        msgQSend(msg_swh, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (str)&cmd, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        send[1] = (int)cmd;
+                        msgQSend(msg_swh, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_rse, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swv, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_prp, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_xyz, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_shd, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_mom, (str)send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 default:
                         break;

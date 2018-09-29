@@ -46,6 +46,7 @@ IMPORT u8 sysInumTbl[];
         *(u8 *)(addr + 0x1000);  \
 })
 
+extern int tid_can;
 extern MSG_Q_ID msg_can[2][3];
 extern MSG_Q_ID msg_tls;
 extern MSG_Q_ID msg_vsl;
@@ -58,26 +59,25 @@ extern MSG_Q_ID msg_xyz;
 extern MSG_Q_ID msg_shd;
 extern MSG_Q_ID msg_mom;
 extern MSG_Q_ID msg_gen;
-
 extern ECU sys_ecu[256];
 
-static void isr0(void);
-static void isr1(void);
-static void init0(void);
-static void init1(void);
-
-static CAN buf_can[2][256];
+static void isr_rx_can0(void);
+static void isr_rx_can1(void);
+static void init_can0(void);
+static void init_can1(void);
+static CAN buf_can[2][200];
 static CAN *p_can[2];
 static LIST lst_can[2];
 
 void t_can(int period)
 {
+        int recv[2];
         int i;
         u8 id[4];
         CAN *p;
         lstInit(&lst_can[0]);
         lstInit(&lst_can[1]);
-        for (i = 0; i < 256; i++) {
+        for (i = 0; i < 200; i++) {
                 lstAdd(&lst_can[0], (NODE *)&buf_can[0][i]);
                 lstAdd(&lst_can[1], (NODE *)&buf_can[1][i]);
         }
@@ -87,21 +87,22 @@ void t_can(int period)
         lstLast(&lst_can[1])->next = lstFirst(&lst_can[1]);
         p_can[0] = (CAN *)lstFirst(&lst_can[0]);
         p_can[1] = (CAN *)lstFirst(&lst_can[1]);
-        init0();
-        init1();
+        init_can0();
+        init_can1();
         for (;;) {
                 taskDelay(period);
                 for (i = 0; i < 2; i++) {
                         if (READ_REG_BYTE(ADDR(i), PELI_SR) & 0x80) {
                                 if (!i)
-                                        init0();
+                                        init_can0();
                                 else
-                                        init1();
+                                        init_can1();
                                 continue;
                         }
-                        if (4 == msgQReceive(msg_can[i][0], (str)&p, 4, NO_WAIT) ||
-                            4 == msgQReceive(msg_can[i][1], (str)&p, 4, NO_WAIT) ||
-                            4 == msgQReceive(msg_can[i][2], (str)&p, 4, NO_WAIT)) {
+                        if (8 == msgQReceive(msg_can[i][0], (str)recv, 8, NO_WAIT) ||
+                            8 == msgQReceive(msg_can[i][1], (str)recv, 8, NO_WAIT) ||
+                            8 == msgQReceive(msg_can[i][2], (str)recv, 8, NO_WAIT)) {
+                                p = (CAN *)recv[1];
                                 *(u32 *)id = *(u32 *)p->id << 3;
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(0), CAN_FF);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(1), p->id[3]);
@@ -122,8 +123,9 @@ void t_can(int period)
         }
 }
 
-static void isr0(void)
+static void isr_rx_can0(void)
 {
+        int send[2] = {tid_can, 0};
         if (READ_REG_BYTE(ADDR(0), PELI_IR) != 0x01 ||
             (READ_REG_BYTE(ADDR(0), PELI_SR) & 0x03) != 0x01 ||
             READ_REG_BYTE(ADDR(0), PELI_RXB(0)) != CAN_FF) {
@@ -145,14 +147,16 @@ static void isr0(void)
         *(u32 *)p_can[0]->id >>= 3;
         if (p_can[0]->id[1] == CA_MAIN && sys_ecu[p_can[0]->id[0]].msg) {
                 p_can[0]->ts = tickGet();
-                msgQSend(sys_ecu[p_can[0]->id[0]].msg, (str)&p_can[0], 4, NO_WAIT, MSG_PRI_NORMAL);
+                send[1] = (int)p_can[0];
+                msgQSend(sys_ecu[p_can[0]->id[0]].msg, (str)send, 8, NO_WAIT, MSG_PRI_NORMAL);
                 p_can[0] = (CAN *)lstNext((NODE *)p_can[0]);
         }
         WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
 }
 
-static void isr1(void)
+static void isr_rx_can1(void)
 {
+        int send[2] = {tid_can, 0};
         if (READ_REG_BYTE(ADDR(1), PELI_IR) != 0x01 ||
             (READ_REG_BYTE(ADDR(1), PELI_SR) & 0x03) != 0x01 ||
             READ_REG_BYTE(ADDR(1), PELI_RXB(0)) != CAN_FF) {
@@ -174,13 +178,14 @@ static void isr1(void)
         *(u32 *)p_can[1]->id >>= 3;
         if (p_can[1]->id[1] == CA_MAIN && sys_ecu[p_can[1]->id[0]].msg) {
                 p_can[1]->ts = tickGet();
-                msgQSend(sys_ecu[p_can[1]->id[0]].msg, (str)&p_can[1], 4, NO_WAIT, MSG_PRI_NORMAL);
+                send[1] = (int)p_can[1];
+                msgQSend(sys_ecu[p_can[1]->id[0]].msg, (str)send, 8, NO_WAIT, MSG_PRI_NORMAL);
                 p_can[1] = (CAN *)lstNext((NODE *)p_can[1]);
         }
         WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);
 }
 
-static void init0(void)
+static void init_can0(void)
 {
         sysIntDisablePIC(5);
         WRITE_REG_BYTE(ADDR(0), PELI_MODE, 0x09);
@@ -200,11 +205,11 @@ static void init0(void)
         WRITE_REG_BYTE(ADDR(0), PELI_EWLR, 0x60);
         WRITE_REG_BYTE(ADDR(0), PELI_OCR, 0x1A);
         WRITE_REG_BYTE(ADDR(0), PELI_MODE, 0x08);
-        intConnect(INUM_TO_IVEC(sysInumTbl[5]), (VOIDFUNCPTR)isr0, 0);
+        intConnect(INUM_TO_IVEC(sysInumTbl[5]), (VOIDFUNCPTR)isr_rx_can0, 0);
         sysIntEnablePIC(5);
 }
 
-static void init1(void)
+static void init_can1(void)
 {
         sysIntDisablePIC(7);
         WRITE_REG_BYTE(ADDR(1), PELI_MODE, 0x09);
@@ -224,7 +229,7 @@ static void init1(void)
         WRITE_REG_BYTE(ADDR(1), PELI_EWLR, 0x60);
         WRITE_REG_BYTE(ADDR(1), PELI_OCR, 0x1A);
         WRITE_REG_BYTE(ADDR(1), PELI_MODE, 0x08);
-        intConnect(INUM_TO_IVEC(sysInumTbl[7]), (VOIDFUNCPTR)isr1, 0);
+        intConnect(INUM_TO_IVEC(sysInumTbl[7]), (VOIDFUNCPTR)isr_rx_can1, 0);
         sysIntEnablePIC(7);
 }
 
