@@ -50,7 +50,7 @@ MSG_Q_ID msg_dbg;
 
 DATA sys_data;
 
-ECU sys_ecu[255];
+ECU sys_ecu[256];
 
 static void ecu_init(void);
 

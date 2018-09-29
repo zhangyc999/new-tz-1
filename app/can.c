@@ -59,7 +59,7 @@ extern MSG_Q_ID msg_shd;
 extern MSG_Q_ID msg_mom;
 extern MSG_Q_ID msg_gen;
 
-extern ECU sys_ecu[255];
+extern ECU sys_ecu[256];
 
 static void isr0(void);
 static void isr1(void);
@@ -77,10 +77,10 @@ void t_can(int period)
         CAN *p;
         lstInit(&lst_can[0]);
         lstInit(&lst_can[1]);
-        for (i = 0; i < 256; i++)
+        for (i = 0; i < 256; i++) {
                 lstAdd(&lst_can[0], (NODE *)&buf_can[0][i]);
-        for (i = 0; i < 256; i++)
                 lstAdd(&lst_can[1], (NODE *)&buf_can[1][i]);
+        }
         lstFirst(&lst_can[0])->previous = lstLast(&lst_can[0]);
         lstFirst(&lst_can[1])->previous = lstLast(&lst_can[1]);
         lstLast(&lst_can[0])->next = lstFirst(&lst_can[0]);
