@@ -1,5 +1,6 @@
 #include "can.h"
 #include "canaddr.h"
+#include "data.h"
 #include "type.h"
 #include "vx.h"
 
@@ -59,6 +60,7 @@ extern MSG_Q_ID msg_xyz;
 extern MSG_Q_ID msg_shd;
 extern MSG_Q_ID msg_mom;
 extern MSG_Q_ID msg_gen;
+extern DATA sys_data;
 extern ECU sys_ecu[256];
 
 static void isr_rx_can0(void);
@@ -118,6 +120,13 @@ void t_can(int period)
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(11), p->data[6]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(12), p->data[7]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
+                        }
+                        if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts < 210) {
+                                if (!i)
+                                        sys_data.fault.bus0 = 1;
+                                else
+                                        sys_data.fault.bus1 = 1;
+                                taskSuspend(0);
                         }
                 }
         }

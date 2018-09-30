@@ -31,7 +31,7 @@ void t_udpr(int period)
                         continue;
                 while (len == recvfrom(sfd_udp, (str)&p->head, len, 0, (struct sockaddr *)&server, &n))
                         ;
-                if (p->head == 0xfec1 && p->len == len) {
+                if (p->head == 0xeeee && p->len == len) {
                         p->ts = tickGet();
                         send[1] = (int)p;
                         msgQSend(msg_core, (str)send, 8, NO_WAIT, MSG_PRI_NORMAL);
@@ -48,7 +48,7 @@ void t_udpt(int period)
         client.sin_family = AF_INET;
         client.sin_port = htons(port_client);
         client.sin_addr.s_addr = inet_addr(addr_group);
-        sys_data.head = 0xc7fe;
+        sys_data.head = 0xcccc;
         sys_data.len = sizeof(DATA);
         for (;;) {
                 taskDelay(period);

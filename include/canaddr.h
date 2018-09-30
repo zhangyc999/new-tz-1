@@ -31,11 +31,6 @@
 #define CA_Y3    0x26 /* crane on the back for Y-axis outside         */
 #define CA_Z0    0x23 /* crane on the front for Z-axis                */
 #define CA_Z1    0x20 /* crane on the back for Z-axis                 */
-#define CA_SHDT  0x93 /* SHielD of Top                                */
-#define CA_SHDS0 0xA3 /* SHielD of Side outside on the left           */
-#define CA_SHDS1 0xA5 /* SHielD of Side inside on the left            */
-#define CA_SHDS2 0xA9 /* SHielD of Side inside on the right           */
-#define CA_SHDS3 0xA6 /* SHielD of Side outside on the right          */
 #define CA_SHDF0 0xB0 /* SHielD of Front on the far left              */
 #define CA_SHDF1 0xB3 /* SHielD of Front on the left                  */
 #define CA_SHDF2 0xB5 /* SHielD of Front on the right                 */
@@ -44,6 +39,11 @@
 #define CA_SHDB1 0xBA /* SHielD of Back on the left                   */
 #define CA_SHDB2 0xBC /* SHielD of Back on the right                  */
 #define CA_SHDB3 0xBF /* SHielD of Back on the far right              */
+#define CA_SHDS0 0xA3 /* SHielD of Side outside on the left           */
+#define CA_SHDS1 0xA5 /* SHielD of Side inside on the left            */
+#define CA_SHDS2 0xA9 /* SHielD of Side inside on the right           */
+#define CA_SHDS3 0xA6 /* SHielD of Side outside on the right          */
+#define CA_SHDT  0x93 /* SHielD of Top                                */
 #define CA_MOM0  0x83 /* MOMent electric machinery on the front left  */
 #define CA_MOM1  0x85 /* MOMent electric machinery on the back left   */
 #define CA_MOM2  0x89 /* MOMent electric machinery on the back right  */

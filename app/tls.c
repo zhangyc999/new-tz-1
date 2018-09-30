@@ -8,33 +8,25 @@ typedef struct {
         CMD *cmd;
 } PCMD;
 
-void t_tls(void)
+void t_tls(int period)
 {
-        int period = sysClkRateGet() / 4;
         int delay = period;
         int stamp;
         int recv[2];
         int send[2] = {taskIdSelf(), 0};
         int i;
         void *p;
-        PCAN can[4];
-        PCMD cmd[3];
-        PCAN *pcan;
-        PCMD *pcmd;
-        LIST lstcan;
-        LIST lstcmd;
-        lstInit(&lstcan);
-        lstInit(&lstcmd);
-        for (i = 0; i < 8; i++)
+        u8 tls0 = 0;
+        u8 tls1 = 1;
+        PCAN can[2][4];
+        PCAN *pcan[2];
+        LIST lstcan[2];
+        lstInit(&lstcan[2]);
+        for (i = 0; i < 4; i++)
                 lstAdd(&lstcan, (NODE *)&can[i]);
-        for (i = 0; i < 3; i++)
-                lstAdd(&lstcmd, (NODE *)&cmd[i]);
         lstFirst(&lstcan)->previous = lstLast(&lstcan);
-        lstFirst(&lstcmd)->previous = lstLast(&lstcmd);
         lstLast(&lstcan)->next = lstFirst(&lstcan);
-        lstLast(&lstcmd)->next = lstFirst(&lstcmd);
         pcan = (PCAN *)lstFirst(&lstcan);
-        pcmd = (PCMD *)lstFirst(&lstcmd);
         for (;;) {
                 stamp = tickGet();
                 if (delay < 0 || delay > period)

@@ -85,7 +85,7 @@ typedef struct {
                         u8 shdb: 1;
                         u8 shdf: 1;
                         u8 : 5;
-                        u8 shdts: 1;
+                        u8 shdst: 1;
                         u8 leg0: 1;
                         u8 leg3: 1;
                         u8 leg1: 1;
@@ -103,7 +103,7 @@ typedef struct {
                         u8 shdb: 1;
                         u8 shdf: 1;
                         u8 : 5;
-                        u8 shdts: 1;
+                        u8 shdst: 1;
                         u8 leg0: 1;
                         u8 leg3: 1;
                         u8 leg1: 1;

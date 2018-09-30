@@ -23,23 +23,30 @@ typedef struct {
                 union {
                         struct {
                                 u8 link: 2;
-                                u8 tilt: 2;
-                                u8 : 4;
-                                u8 res[3];
+                                u8 x: 2;
+                                u8 y: 2;
+                                u8 dx: 2;
+                                u8 dy: 2;
+                                u8 xdiff: 2;
+                                u8 ydiff: 2;
+                                u8 : 2;
+                                u8 res[2];
                                 u32 pick;
                         } relax;
                 } tls;
                 union {
                         struct {
                                 u8 link: 2;
-                                u8 x0: 2;
-                                u8 x1: 2;
-                                u8 y01: 2;
-                                u8 y23: 2;
-                                u8 z0: 2;
-                                u8 z1: 2;
-                                u8 : 2;
-                                u8 res[2];
+                                u8 xmin: 2;
+                                u8 xmax: 2;
+                                u8 ymin: 2;
+                                u8 ymax: 2;
+                                u8 zmin: 2;
+                                u8 zmax: 2;
+                                u8 toonear: 2;
+                                u8 toofar: 2;
+                                u8 : 6;
+                                u8 res;
                                 u32 pick;
                         } relax;
                         struct {
@@ -51,8 +58,20 @@ typedef struct {
                 union {
                         struct {
                                 u8 link: 2;
+                                u8 v24min: 2;
+                                u8 v24max: 2;
+                                u8 a24min: 2;
+                                u8 a24max: 2;
+                                u8 v500min: 2;
+                                u8 v500max: 2;
+                                u8 a500min: 2;
+                                u8 a500max: 2;
+                                u8 dv24: 2;
+                                u8 da24: 2;
+                                u8 dv500: 2;
+                                u8 da500: 2;
                                 u8 : 6;
-                                u8 res[7];
+                                u8 res[4];
                         } relax;
                         struct {
                                 u8 : 8;
@@ -65,7 +84,7 @@ typedef struct {
                                 u8 shdb: 1;
                                 u8 shdf: 1;
                                 u8 : 5;
-                                u8 shdts: 1;
+                                u8 shdst: 1;
                                 u8 leg0: 1;
                                 u8 leg3: 1;
                                 u8 leg1: 1;
@@ -79,21 +98,18 @@ typedef struct {
                 union {
                         struct {
                                 u8 link: 2;
-                                u8 rlx1: 2;
-                                u8 rlx2: 2;
-                                u8 rlx3: 2;
-                                u8 rlx4: 2;
-                                u8 rlx5: 2;
-                                u8 rlx6: 2;
-                                u8 rlx7: 2;
-                                u8 rlx8: 2;
-                                u8 rlx9: 2;
-                                u8 rlx10: 2;
-                                u8 rlx11: 2;
-                                u8 rlx12: 2;
-                                u8 rlx13: 2;
-                                u8 rlx14: 2;
-                                u8 rlx15: 2;
+                                u8 sync: 2;
+                                u8 pmin: 2;
+                                u8 pmax: 2;
+                                u8 vel: 2;
+                                u8 amin: 2;
+                                u8 amax: 2;
+                                u8 dp: 2;
+                                u8 dv: 2;
+                                u8 da: 2;
+                                u8 smin: 2;
+                                u8 smax: 2;
+                                u8 res;
                                 u32 pick;
                         } relax;
                         struct {
@@ -119,21 +135,21 @@ typedef struct {
 
 #define CMD_IDLE 0x00
 
-#define CMD_SRC_UDP  0xec
+#define CMD_SRC_UDP  0xee
 #define CMD_SRC_CORE 0xcc
 
-#define CMD_DEV_TLS  HAMMING_74(0x1)
-#define CMD_DEV_VSL  HAMMING_74(0x2)
-#define CMD_DEV_PSU  HAMMING_74(0x3)
-#define CMD_DEV_SWH  HAMMING_74(0x4)
-#define CMD_DEV_RSE  HAMMING_74(0x5)
-#define CMD_DEV_SWV  HAMMING_74(0x6)
-#define CMD_DEV_PRP  HAMMING_74(0x7)
-#define CMD_DEV_XYZ  HAMMING_74(0x8)
-#define CMD_DEV_SHD  HAMMING_74(0x9)
-#define CMD_DEV_MOM  HAMMING_74(0xa)
-#define CMD_DEV_GEN  HAMMING_74(0xb)
-#define CMD_SRV_ALL  HAMMING_74(0xc)
+#define CMD_DEV_TLS HAMMING_74(0x1)
+#define CMD_DEV_VSL HAMMING_74(0x2)
+#define CMD_DEV_PSU HAMMING_74(0x3)
+#define CMD_DEV_SWH HAMMING_74(0x4)
+#define CMD_DEV_RSE HAMMING_74(0x5)
+#define CMD_DEV_SWV HAMMING_74(0x6)
+#define CMD_DEV_PRP HAMMING_74(0x7)
+#define CMD_DEV_XYZ HAMMING_74(0x8)
+#define CMD_DEV_SHD HAMMING_74(0x9)
+#define CMD_DEV_MOM HAMMING_74(0xa)
+#define CMD_DEV_GEN HAMMING_74(0xb)
+#define CMD_SRV_ALL HAMMING_74(0xc)
 
 #define CMD_MODE_RELAX  HAMMING_74(0x1)
 #define CMD_MODE_STUPID HAMMING_74(0x2)
