@@ -67,28 +67,30 @@ static void isr_rx_can0(void);
 static void isr_rx_can1(void);
 static void init_can0(void);
 static void init_can1(void);
-static CAN buf_can[2][200];
 static CAN *p_can[2];
-static LIST lst_can[2];
 
-void t_can(int period)
+void t_can(int period, int duration)
 {
-        int recv[2];
+        struct {
+                int tid;
+                CAN *p;
+        } recv;
         int i;
         u8 id[4];
-        CAN *p;
-        lstInit(&lst_can[0]);
-        lstInit(&lst_can[1]);
-        for (i = 0; i < 200; i++) {
-                lstAdd(&lst_can[0], (NODE *)&buf_can[0][i]);
-                lstAdd(&lst_can[1], (NODE *)&buf_can[1][i]);
+        CAN buf[2][duration];
+        LIST lst[2];
+        lstInit(&lst[0]);
+        lstInit(&lst[1]);
+        for (i = 0; i < duration; i++) {
+                lstAdd(&lst[0], (NODE *)&buf[0][i]);
+                lstAdd(&lst[1], (NODE *)&buf[1][i]);
         }
-        lstFirst(&lst_can[0])->previous = lstLast(&lst_can[0]);
-        lstFirst(&lst_can[1])->previous = lstLast(&lst_can[1]);
-        lstLast(&lst_can[0])->next = lstFirst(&lst_can[0]);
-        lstLast(&lst_can[1])->next = lstFirst(&lst_can[1]);
-        p_can[0] = (CAN *)lstFirst(&lst_can[0]);
-        p_can[1] = (CAN *)lstFirst(&lst_can[1]);
+        lstFirst(&lst[0])->previous = lstLast(&lst[0]);
+        lstFirst(&lst[1])->previous = lstLast(&lst[1]);
+        lstLast(&lst[0])->next = lstFirst(&lst[0]);
+        lstLast(&lst[1])->next = lstFirst(&lst[1]);
+        p_can[0] = (CAN *)lstFirst(&lst[0]);
+        p_can[1] = (CAN *)lstFirst(&lst[1]);
         init_can0();
         init_can1();
         for (;;) {
@@ -101,27 +103,26 @@ void t_can(int period)
                                         init_can1();
                                 continue;
                         }
-                        if (8 == msgQReceive(msg_can[i][0], (str)recv, 8, NO_WAIT) ||
-                            8 == msgQReceive(msg_can[i][1], (str)recv, 8, NO_WAIT) ||
-                            8 == msgQReceive(msg_can[i][2], (str)recv, 8, NO_WAIT)) {
-                                p = (CAN *)recv[1];
-                                *(u32 *)id = *(u32 *)p->id << 3;
+                        if (8 == msgQReceive(msg_can[i][0], (str)&recv, 8, NO_WAIT) ||
+                            8 == msgQReceive(msg_can[i][1], (str)&recv, 8, NO_WAIT) ||
+                            8 == msgQReceive(msg_can[i][2], (str)&recv, 8, NO_WAIT)) {
+                                *(u32 *)id = *(u32 *)recv.p->id << 3;
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(0), CAN_FF);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(1), p->id[3]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(2), p->id[2]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(3), p->id[1]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(4), p->id[0]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(5), p->data[0]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(6), p->data[1]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(7), p->data[2]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(8), p->data[3]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(9), p->data[4]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(10), p->data[5]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(11), p->data[6]);
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(12), p->data[7]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(1), recv.p->id[3]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(2), recv.p->id[2]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(3), recv.p->id[1]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(4), recv.p->id[0]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(5), recv.p->data[0]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(6), recv.p->data[1]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(7), recv.p->data[2]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(8), recv.p->data[3]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(9), recv.p->data[4]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(10), recv.p->data[5]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(11), recv.p->data[6]);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(12), recv.p->data[7]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
                         }
-                        if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts < 210) {
+                        if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts < duration * 1.1) {
                                 if (!i)
                                         sys_data.fault.bus0 = 1;
                                 else
@@ -134,7 +135,11 @@ void t_can(int period)
 
 static void isr_rx_can0(void)
 {
-        int send[2] = {tid_can, 0};
+        struct {
+                int tid;
+                CAN *p;
+        } send;
+        send.tid = tid_can;
         if (READ_REG_BYTE(ADDR(0), PELI_IR) != 0x01 ||
             (READ_REG_BYTE(ADDR(0), PELI_SR) & 0x03) != 0x01 ||
             READ_REG_BYTE(ADDR(0), PELI_RXB(0)) != CAN_FF) {
@@ -156,8 +161,8 @@ static void isr_rx_can0(void)
         *(u32 *)p_can[0]->id >>= 3;
         if (p_can[0]->id[1] == CA_MAIN && sys_ecu[p_can[0]->id[0]].msg) {
                 p_can[0]->ts = tickGet();
-                send[1] = (int)p_can[0];
-                msgQSend(sys_ecu[p_can[0]->id[0]].msg, (str)send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                send.p = p_can[0];
+                msgQSend(sys_ecu[p_can[0]->id[0]].msg, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                 p_can[0] = (CAN *)lstNext((NODE *)p_can[0]);
         }
         WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
@@ -165,7 +170,11 @@ static void isr_rx_can0(void)
 
 static void isr_rx_can1(void)
 {
-        int send[2] = {tid_can, 0};
+        struct {
+                int tid;
+                CAN *p;
+        } send;
+        send.tid = tid_can;
         if (READ_REG_BYTE(ADDR(1), PELI_IR) != 0x01 ||
             (READ_REG_BYTE(ADDR(1), PELI_SR) & 0x03) != 0x01 ||
             READ_REG_BYTE(ADDR(1), PELI_RXB(0)) != CAN_FF) {
@@ -187,8 +196,8 @@ static void isr_rx_can1(void)
         *(u32 *)p_can[1]->id >>= 3;
         if (p_can[1]->id[1] == CA_MAIN && sys_ecu[p_can[1]->id[0]].msg) {
                 p_can[1]->ts = tickGet();
-                send[1] = (int)p_can[1];
-                msgQSend(sys_ecu[p_can[1]->id[0]].msg, (str)send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                send.p = p_can[1];
+                msgQSend(sys_ecu[p_can[1]->id[0]].msg, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                 p_can[1] = (CAN *)lstNext((NODE *)p_can[1]);
         }
         WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);

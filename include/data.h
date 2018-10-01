@@ -8,22 +8,17 @@ typedef struct {
         u16 len;
         struct {
                 struct {
-                        u8 err0: 2;
-                        u8 err1: 2;
-                        u8 err2: 2;
-                        u8 err3: 2;
-                        u8 err4: 2;
-                        u8 err5: 2;
-                        u8 err6: 2;
-                        u8 err7: 2;
-                        u8 err8: 2;
-                        u8 err9: 2;
-                        u8 err10: 2;
-                        u8 err11: 2;
-                        u8 err12: 2;
-                        u8 err13: 2;
-                        u8 err14: 2;
-                        u8 err15: 2;
+                        u8 link: 2;
+                        u8 x: 2;
+                        u8 y: 2;
+                        u8 dx: 2;
+                        u8 dy: 2;
+                        u8 xdiff: 2;
+                        u8 ydiff: 2;
+                        u8 : 2;
+                        u8 res;
+                        u8 : 6;
+                        u8 dev: 2;
                 } fault;
                 s16 x;
                 s16 y;
@@ -31,22 +26,18 @@ typedef struct {
         } tls[2];
         struct {
                 struct {
-                        u8 err0: 2;
-                        u8 err1: 2;
-                        u8 err2: 2;
-                        u8 err3: 2;
-                        u8 err4: 2;
-                        u8 err5: 2;
-                        u8 err6: 2;
-                        u8 err7: 2;
-                        u8 err8: 2;
-                        u8 err9: 2;
-                        u8 err10: 2;
-                        u8 err11: 2;
-                        u8 err12: 2;
-                        u8 err13: 2;
-                        u8 err14: 2;
-                        u8 err15: 2;
+                        u8 link: 2;
+                        u8 xmin: 2;
+                        u8 xmax: 2;
+                        u8 ymin: 2;
+                        u8 ymax: 2;
+                        u8 zmin: 2;
+                        u8 zmax: 2;
+                        u8 toonear: 2;
+                        u8 toofar: 2;
+                        u8 : 6;
+                        u8 : 6;
+                        u8 dev: 2;
                 } fault;
                 u8 res;
                 u8 proc;
@@ -57,22 +48,21 @@ typedef struct {
         } vsl[2];
         struct {
                 struct {
-                        u8 err0: 2;
-                        u8 err1: 2;
-                        u8 err2: 2;
-                        u8 err3: 2;
-                        u8 err4: 2;
-                        u8 err5: 2;
-                        u8 err6: 2;
-                        u8 err7: 2;
-                        u8 err8: 2;
-                        u8 err9: 2;
-                        u8 err10: 2;
-                        u8 err11: 2;
-                        u8 err12: 2;
-                        u8 err13: 2;
-                        u8 err14: 2;
-                        u8 err15: 2;
+                        u8 link: 2;
+                        u8 v24min: 2;
+                        u8 v24max: 2;
+                        u8 a24min: 2;
+                        u8 a24max: 2;
+                        u8 v500min: 2;
+                        u8 v500max: 2;
+                        u8 a500min: 2;
+                        u8 a500max: 2;
+                        u8 dv24: 2;
+                        u8 da24: 2;
+                        u8 dv500: 2;
+                        u8 da500: 2;
+                        u8 : 4;
+                        u8 dev: 2;
                 } fault;
                 struct {
                         u8 : 8;
@@ -118,22 +108,22 @@ typedef struct {
         } psu;
         struct {
                 struct {
-                        u8 err0: 2;
-                        u8 err1: 2;
-                        u8 err2: 2;
-                        u8 err3: 2;
-                        u8 err4: 2;
-                        u8 err5: 2;
-                        u8 err6: 2;
-                        u8 err7: 2;
-                        u8 err8: 2;
-                        u8 err9: 2;
-                        u8 err10: 2;
-                        u8 err11: 2;
-                        u8 err12: 2;
-                        u8 err13: 2;
-                        u8 err14: 2;
-                        u8 err15: 2;
+                        u8 link: 2;
+                        u8 sync: 2;
+                        u8 pmin: 2;
+                        u8 pmax: 2;
+                        u8 vel: 2;
+                        u8 amin: 2;
+                        u8 amax: 2;
+                        u8 dp: 2;
+                        u8 dv: 2;
+                        u8 da: 2;
+                        u8 smin: 2;
+                        u8 smax: 2;
+                        u8 brake: 2;
+                        u8 limit: 2;
+                        u8 : 2;
+                        u8 dev: 2;
                 } fault;
                 struct {
                         u8 brake: 1;
@@ -167,5 +157,10 @@ typedef struct {
         u8 res[2];
         u8 chk;
 } DATA;
+
+#define NORMAL  0
+#define WARNING 1
+#define GENERAL 2
+#define SERIOUS 3
 
 #endif /* DATA_H_ */
