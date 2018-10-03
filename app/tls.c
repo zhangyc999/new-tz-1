@@ -87,20 +87,6 @@ void t_tls(int period, int duration)
                                         break;
                                 }
                                 if (p[tls]->can) {
-                                        if (tickGet() - p[tls]->can->ts < period * 1.1) {
-                                                if (link[tls][YES] < 10)
-                                                        link[tls][YES]++;
-                                                link[tls][NO] = 0;
-                                        } else {
-                                                if (link[tls][NO] < 10)
-                                                        link[tls][NO]++;
-                                                link[tls][YES] = 0;
-                                        }
-                                } else {
-                                        link[tls][YES] = 10;
-                                        link[tls][NO] = 0;
-                                }
-                                if (p[tls]->can) {
                                         xsum[tls] -= *(s16 *)&p[tls]->can->data[0];
                                         ysum[tls] -= *(s16 *)&p[tls]->can->data[2];
                                         ctr[tls]--;
@@ -117,7 +103,7 @@ void t_tls(int period, int duration)
                                 ctr[tls]++;
                                 xavg[tls] = xsum[tls] / ctr[tls];
                                 yavg[tls] = ysum[tls] / ctr[tls];
-                                if (p[tls]->can && prev[tls]->can) {
+                                if (prev[tls]->can) {
                                         dx[tls] = abs(xcur[tls] - xprev[tls]);
                                         dy[tls] = abs(ycur[tls] - yprev[tls]);
                                 } else {
@@ -130,42 +116,6 @@ void t_tls(int period, int duration)
                                 } else {
                                         xdiff = 0;
                                         ydiff = 0;
-                                }
-                                switch (sys_data.tls[tls].fault.link) {
-                                case NORMAL:
-                                        if (link[tls][NO] > 2 + rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = SERIOUS;
-                                        else if (link[tls][NO] > 1 + rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = GENERAL;
-                                        else if (link[tls][NO] > 0 + rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = WARNING;
-                                        break;
-                                case WARNING:
-                                        if (link[tls][NO] > 2 + rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = SERIOUS;
-                                        else if (link[tls][NO] > 1 + rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = GENERAL;
-                                        else if (link[tls][YES] > 9 - rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = NORMAL;
-                                        break;
-                                case GENERAL:
-                                        if (link[tls][NO] > 2 + rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = SERIOUS;
-                                        else if (link[tls][YES] > 9 - rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = NORMAL;
-                                        else if (link[tls][YES] > 8 - rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = WARNING;
-                                        break;
-                                case SERIOUS:
-                                        if (link[tls][YES] > 9 - rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = NORMAL;
-                                        else if (link[tls][YES] > 8 - rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = WARNING;
-                                        else if (link[tls][YES] > 7 - rlxlink[tls])
-                                                sys_data.tls[tls].fault.link = GENERAL;
-                                        break;
-                                default:
-                                        break;
                                 }
                                 switch (sys_data.tls[tls].fault.x) {
                                 case NORMAL:
@@ -544,6 +494,58 @@ void t_tls(int period, int duration)
                                 cmd = (CMD *)tmp[1];
                                 delay -= tickGet() - stamp;
                         } else {
+                                for (i = 0; i < 2; i++) {
+                                        if (prev[i]->can) {
+                                                if (tickGet() - prev[i]->can->ts < period * 1.1) {
+                                                        if (link[i][YES] < 10)
+                                                                link[i][YES]++;
+                                                        link[i][NO] = 0;
+                                                } else {
+                                                        if (link[i][NO] < 10)
+                                                                link[i][NO]++;
+                                                        link[i][YES] = 0;
+                                                }
+                                        } else {
+                                                link[i][YES] = 10;
+                                                link[i][NO] = 0;
+                                        }
+                                        switch (sys_data.tls[i].fault.link) {
+                                        case NORMAL:
+                                                if (link[i][NO] > 2 + rlxlink[i])
+                                                        sys_data.tls[i].fault.link = SERIOUS;
+                                                else if (link[i][NO] > 1 + rlxlink[i])
+                                                        sys_data.tls[i].fault.link = GENERAL;
+                                                else if (link[i][NO] > 0 + rlxlink[i])
+                                                        sys_data.tls[i].fault.link = WARNING;
+                                                break;
+                                        case WARNING:
+                                                if (link[i][NO] > 2 + rlxlink[i])
+                                                        sys_data.tls[i].fault.link = SERIOUS;
+                                                else if (link[i][NO] > 1 + rlxlink[i])
+                                                        sys_data.tls[i].fault.link = GENERAL;
+                                                else if (link[i][YES] > 9 - rlxlink[i])
+                                                        sys_data.tls[i].fault.link = NORMAL;
+                                                break;
+                                        case GENERAL:
+                                                if (link[i][NO] > 2 + rlxlink[i])
+                                                        sys_data.tls[i].fault.link = SERIOUS;
+                                                else if (link[i][YES] > 9 - rlxlink[i])
+                                                        sys_data.tls[i].fault.link = NORMAL;
+                                                else if (link[i][YES] > 8 - rlxlink[i])
+                                                        sys_data.tls[i].fault.link = WARNING;
+                                                break;
+                                        case SERIOUS:
+                                                if (link[i][YES] > 9 - rlxlink[i])
+                                                        sys_data.tls[i].fault.link = NORMAL;
+                                                else if (link[i][YES] > 8 - rlxlink[i])
+                                                        sys_data.tls[i].fault.link = WARNING;
+                                                else if (link[i][YES] > 7 - rlxlink[i])
+                                                        sys_data.tls[i].fault.link = GENERAL;
+                                                break;
+                                        default:
+                                                break;
+                                        }
+                                }
                                 can[0].id[0] = CA_MAIN;
                                 can[0].id[1] = CA_TLS0;
                                 can[0].id[2] = 0x5c;
