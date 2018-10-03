@@ -53,7 +53,6 @@ MSG_Q_ID msg_xyz;
 MSG_Q_ID msg_shd;
 MSG_Q_ID msg_mom;
 MSG_Q_ID msg_gen;
-MSG_Q_ID msg_dbg;
 DATA sys_data;
 ECU sys_ecu[256];
 
@@ -94,7 +93,6 @@ void tz(void)
         msg_shd = msgQCreate(128, 8, MSG_Q_FIFO);
         msg_mom = msgQCreate(128, 8, MSG_Q_FIFO);
         msg_gen = msgQCreate(128, 8, MSG_Q_FIFO);
-        msg_dbg = msgQCreate(128, 8, MSG_Q_FIFO);
         lstLibInit();
         ecu_init();
         sysClkRateSet(100);
