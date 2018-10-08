@@ -122,12 +122,14 @@ void t_can(int period, int duration)
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(12), recv.p->data[7]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
                         }
-                        if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts < duration * 1.1) {
-                                if (!i)
-                                        sys_data.fault.bus0 = 1;
-                                else
-                                        sys_data.fault.bus1 = 1;
-                                taskSuspend(0);
+                        if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts && p_can[i]->ts) {
+                                if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts < duration * 1.1) {
+                                        if (!i)
+                                                sys_data.fault.bus0 = 1;
+                                        else
+                                                sys_data.fault.bus1 = 1;
+                                        taskSuspend(0);
+                                }
                         }
                 }
         }

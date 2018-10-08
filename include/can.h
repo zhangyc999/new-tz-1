@@ -13,6 +13,11 @@ struct ext_can {
 
 typedef struct ext_can CAN;
 
+typedef struct {
+        NODE node;
+        CAN *can;
+} PCAN;
+
 #define CAN_SFF 0
 #define CAN_EFF 1
 #define CAN_RTR 0

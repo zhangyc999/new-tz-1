@@ -97,10 +97,11 @@ void tz(void)
         ecu_init();
         sysClkRateSet(100);
         tid_core = taskSpawn("CORE", 99, VX_FP_TASK, 20000, (FUNCPTR)t_core, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_udpr = taskSpawn("UDPR", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpr, 10, 100, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_udpr = taskSpawn("UDPR", 90, VX_FP_TASK, 200000, (FUNCPTR)t_udpr, 10, 100, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_udpt = taskSpawn("UDPT", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpt, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_can = taskSpawn("CAN", 40, VX_FP_TASK, 20000, (FUNCPTR)t_can, 1, 1000, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_can = taskSpawn("CAN", 40, VX_FP_TASK, 200000, (FUNCPTR)t_can, 1, 1000, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_tls = taskSpawn("TLS", 40, VX_FP_TASK, 20000, (FUNCPTR)t_tls, 50, 10, 0, 0, 0, 0, 0, 0, 0, 0);
+#if 0
         tid_vsl = taskSpawn("VSL", 90, VX_FP_TASK, 20000, (FUNCPTR)t_vsl, 100, 5, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_psu = taskSpawn("PSU", 90, VX_FP_TASK, 20000, (FUNCPTR)t_psu, 10, 50, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_swh = taskSpawn("SWH", 90, VX_FP_TASK, 20000, (FUNCPTR)t_swh, 10, 50, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -111,6 +112,7 @@ void tz(void)
         tid_shd = taskSpawn("SHD", 90, VX_FP_TASK, 20000, (FUNCPTR)t_shd, 10, 50, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_mom = taskSpawn("MOM", 90, VX_FP_TASK, 20000, (FUNCPTR)t_mom, 10, 50, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_dbg = taskSpawn("DBG", 100, VX_FP_TASK, 20000, (FUNCPTR)t_dbg, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+#endif
 }
 
 static void ecu_init(void)

@@ -13,11 +13,6 @@ extern MSG_Q_ID msg_can[2][3];
 extern MSG_Q_ID msg_tls;
 extern DATA sys_data;
 
-typedef struct {
-        NODE node;
-        CAN *can;
-} PCAN;
-
 void t_tls(int period, int duration)
 {
         struct {
@@ -35,8 +30,6 @@ void t_tls(int period, int duration)
         int yavg[2] = {0};
         int xcur[2] = {0};
         int ycur[2] = {0};
-        int xprev[2] = {0};
-        int yprev[2] = {0};
         int err[2] = {0};
         int dx[2] = {0};
         int dy[2] = {0};
@@ -58,7 +51,8 @@ void t_tls(int period, int duration)
         PCAN *prev[2];
         LIST lst[2];
         memset(buf, 0, sizeof(buf));
-        lstInit(&lst[2]);
+        lstInit(&lst[0]);
+        lstInit(&lst[1]);
         for (i = 0; i < duration; i++) {
                 lstAdd(&lst[0], (NODE *)&buf[0][i]);
                 lstAdd(&lst[1], (NODE *)&buf[1][i]);
@@ -96,16 +90,14 @@ void t_tls(int period, int duration)
                                 xcur[tls] = *(s16 *)&p[tls]->can->data[0];
                                 ycur[tls] = *(s16 *)&p[tls]->can->data[2];
                                 err[tls] = *(u8 *)&p[tls]->can->data[6];
-                                xprev[tls] = *(s16 *)&prev[tls]->can->data[0];
-                                yprev[tls] = *(s16 *)&prev[tls]->can->data[2];
                                 xsum[tls] += xcur[tls];
                                 ysum[tls] += ycur[tls];
                                 ctr[tls]++;
                                 xavg[tls] = xsum[tls] / ctr[tls];
                                 yavg[tls] = ysum[tls] / ctr[tls];
                                 if (prev[tls]->can) {
-                                        dx[tls] = abs(xcur[tls] - xprev[tls]);
-                                        dy[tls] = abs(ycur[tls] - yprev[tls]);
+                                        dx[tls] = abs(xcur[tls] - * (s16 *)&prev[tls]->can->data[0]);
+                                        dy[tls] = abs(ycur[tls] - * (s16 *)&prev[tls]->can->data[2]);
                                 } else {
                                         dx[tls] = 0;
                                         dy[tls] = 0;
@@ -368,6 +360,7 @@ void t_tls(int period, int duration)
                                 p[tls] = (PCAN *)lstNext((NODE *)p[tls]);
                                 delay -= tickGet() - stamp;
                         } else if (tmp[0] == tid_core) {
+                                cmd = (CMD *)tmp[1];
                                 if (cmd->src == ((CMD *)tmp[1])->src &&
                                     cmd->dev == ((CMD *)tmp[1])->dev &&
                                     cmd->mode == ((CMD *)tmp[1])->mode &&
@@ -491,7 +484,6 @@ void t_tls(int period, int duration)
                                                 }
                                         }
                                 }
-                                cmd = (CMD *)tmp[1];
                                 delay -= tickGet() - stamp;
                         } else {
                                 for (i = 0; i < 2; i++) {
@@ -575,7 +567,6 @@ void t_tls(int period, int duration)
                                 send.p = &can[1];
                                 msgQSend(msg_can[1][0], (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 delay = period;
-                                taskDelay(period);
                         }
                 }
         }
