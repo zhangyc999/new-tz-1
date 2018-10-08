@@ -58,10 +58,10 @@
 | 5 | socket() |  |
 | 6 | bind() |  |
 | 7 | setsockopt() |  |
-| 8 | msgQCreate() | 库函数：创建消息队列 |
-| 9 | lstLibInit() | 库函数：双向循环链表功能初始化 |
+| 8 | msgQCreate() | _库函数：创建消息队列_ |
+| 9 | lstLibInit() | _库函数：双向循环链表功能初始化_ |
 | 10 | ecu_init() | 初始化各CAN节点索引及消息队列 |
-| 11 | sysClkRateSet() | 库函数：设置系统调用时间片 |
-| 12 | taskSpawn() | 库函数：创建任务 |
+| 11 | sysClkRateSet() | _库函数：设置系统调用时间片_ |
+| 12 | taskSpawn() | _库函数：创建任务_ |
 
 ## static void ecu_init(void) {}
