@@ -27,8 +27,8 @@ typedef struct {
                                 u8 y: 2;
                                 u8 dx: 2;
                                 u8 dy: 2;
-                                u8 xdiff: 2;
-                                u8 ydiff: 2;
+                                u8 xd: 2;
+                                u8 yd: 2;
                                 u8 : 2;
                                 u8 res[2];
                                 u32 pick;
