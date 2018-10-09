@@ -128,7 +128,6 @@ void t_can(int period, int duration)
                                                 sys_data.fault.bus0 = 1;
                                         else
                                                 sys_data.fault.bus1 = 1;
-                                        taskSuspend(0);
                                 }
                         }
                 }
