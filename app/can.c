@@ -77,6 +77,7 @@ void t_can(int period, int duration)
         } recv;
         int i;
         u8 id[4];
+        u32 delta;
         CAN buf[2][duration];
         LIST lst[2];
         lstInit(&lst[0]);
@@ -123,12 +124,23 @@ void t_can(int period, int duration)
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
                         }
                         if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts && p_can[i]->ts) {
-                                if (((CAN *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts < duration * 1.1) {
+                                delta = ((CAN *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts;
+                                if (delta < duration - 10) {
                                         if (!i)
                                                 sys_data.fault.bus0 = 1;
                                         else
                                                 sys_data.fault.bus1 = 1;
+                                } else if (delta > duration + 10) {
+                                        if (!i)
+                                                sys_data.fault.bus0 = 0;
+                                        else
+                                                sys_data.fault.bus1 = 0;
                                 }
+                        } else {
+                                if (!i)
+                                        sys_data.fault.bus0 = 0;
+                                else
+                                        sys_data.fault.bus1 = 0;
                         }
                 }
         }
