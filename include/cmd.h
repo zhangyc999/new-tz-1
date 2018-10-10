@@ -23,14 +23,16 @@ typedef struct {
                 union {
                         struct {
                                 u8 link: 2;
-                                u8 x: 2;
-                                u8 y: 2;
+                                u8 xmin: 2;
+                                u8 xmax: 2;
+                                u8 ymin: 2;
+                                u8 ymax: 2;
                                 u8 dx: 2;
                                 u8 dy: 2;
                                 u8 xd: 2;
                                 u8 yd: 2;
-                                u8 : 2;
-                                u8 res[2];
+                                u8 : 6;
+                                u8 res;
                                 u32 pick;
                         } relax;
                 } tls;
