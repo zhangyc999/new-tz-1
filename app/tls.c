@@ -2,6 +2,7 @@
 #include "canaddr.h"
 #include "cmd.h"
 #include "data.h"
+#include "type.h"
 #include "vx.h"
 
 #define NO  0
@@ -13,258 +14,416 @@ extern MSG_Q_ID msg_can[2][3];
 extern MSG_Q_ID msg_tls;
 extern DATA sys_data;
 
+#define DEVS 2
+
+#define LINK 0
+#define X    1
+#define Y    2
+#define DX   3
+#define DY   4
+#define XD   5
+#define YD   6
+
 void t_tls(int period, int duration)
 {
         struct {
                 int tid;
                 CAN *p;
         } send;
+        struct {
+                int xofs[DEVS];
+                int yofs[DEVS];
+                int x[DEVS][3];
+                int y[DEVS][3];
+                int dx[DEVS][3];
+                int dy[DEVS][3];
+                int xd[3];
+                int yd[3];
+        } cfg;
         int delay = period;
         int stamp;
-        int tmp[2];
-        int ctr[2] = {0, 0};
-        int link[2][2] = {{0}, {0}};
-        int xsum[2] = {0};
-        int ysum[2] = {0};
-        int xavg[2] = {0};
-        int yavg[2] = {0};
-        int xcur[2] = {0};
-        int ycur[2] = {0};
-        int err[2] = {0};
-        int dx[2] = {0};
-        int dy[2] = {0};
-        int xdiff = 0;
-        int ydiff = 0;
-        int rlxlink[2] = {0};
-        int rlxx[2] = {0};
-        int rlxy[2] = {0};
-        int rlxdx[2] = {0};
-        int rlxdy[2] = {0};
-        int rlxxd[2] = {0};
-        int rlxyd[2] = {0};
-        int i;
-        u8 tls;
+        int tmp[DEVS];
+        int ctr[DEVS] = {0, 0};
+        int link[DEVS][2] = {{0}, {0}};
+        int xsum[DEVS] = {0};
+        int ysum[DEVS] = {0};
+        int xavg[DEVS] = {0};
+        int yavg[DEVS] = {0};
+        int xcur[DEVS] = {0};
+        int ycur[DEVS] = {0};
+        int err[DEVS] = {0};
+        int dx[DEVS] = {0};
+        int dy[DEVS] = {0};
+        int xd = 0;
+        int yd = 0;
+        int relax[DEVS][16] = {{0}, {0}};
+        int i, j;
+        int fd = open("/tls.cfg", O_RDWR, 0644);
+        u8 dev;
         CMD *cmd;
-        CAN can[2];
-        PCAN buf[2][duration];
-        PCAN *p[2];
-        PCAN *prev[2];
-        LIST lst[2];
+        CAN can[DEVS];
+        PCAN buf[DEVS][duration];
+        PCAN *p[DEVS];
+        PCAN *prev[DEVS];
+        LIST lst[DEVS];
         memset(buf, 0, sizeof(buf));
-        lstInit(&lst[0]);
-        lstInit(&lst[1]);
-        for (i = 0; i < duration; i++) {
-                lstAdd(&lst[0], (NODE *)&buf[0][i]);
-                lstAdd(&lst[1], (NODE *)&buf[1][i]);
+        cfg.xofs[0] = 0;
+        cfg.xofs[1] = 0;
+        cfg.yofs[0] = 0;
+        cfg.yofs[1] = 0;
+        cfg.x[0][0] = 500;
+        cfg.x[0][1] = 1000;
+        cfg.x[0][2] = 2000;
+        cfg.x[1][0] = 500;
+        cfg.x[1][1] = 1000;
+        cfg.x[1][2] = 2000;
+        cfg.y[0][0] = 500;
+        cfg.y[0][1] = 1000;
+        cfg.y[0][2] = 2000;
+        cfg.y[1][0] = 500;
+        cfg.y[1][1] = 1000;
+        cfg.y[1][2] = 2000;
+        cfg.dx[0][0] = 200;
+        cfg.dx[0][1] = 500;
+        cfg.dx[0][2] = 1000;
+        cfg.dx[1][0] = 200;
+        cfg.dx[1][1] = 500;
+        cfg.dx[1][2] = 1000;
+        cfg.xd[0] = 200;
+        cfg.xd[1] = 500;
+        cfg.xd[2] = 1000;
+        cfg.yd[0] = 200;
+        cfg.yd[1] = 500;
+        cfg.yd[2] = 1000;
+        if (fd)
+                read(fd, (str)&cfg, sizeof(cfg));
+        for (i = 0; i < DEVS; i++) {
+                lstInit(&lst[i]);
+                for (j = 0; j < duration; j++)
+                        lstAdd(&lst[i], (NODE *)&buf[i][j]);
+                lstFirst(&lst[i])->previous = lstLast(&lst[i]);
+                lstLast(&lst[i])->next = lstFirst(&lst[i]);
+                p[i] = (PCAN *)lstFirst(&lst[i]);
         }
-        lstFirst(&lst[0])->previous = lstLast(&lst[0]);
-        lstFirst(&lst[1])->previous = lstLast(&lst[1]);
-        lstLast(&lst[0])->next = lstFirst(&lst[0]);
-        lstLast(&lst[1])->next = lstFirst(&lst[1]);
-        p[0] = (PCAN *)lstFirst(&lst[0]);
-        p[1] = (PCAN *)lstFirst(&lst[1]);
         send.tid = taskIdSelf();
         for (;;) {
                 stamp = tickGet();
                 if (delay < 0 || delay > period)
                         delay = 0;
                 if (8 == msgQReceive(msg_tls, (str)tmp, 8, delay)) {
-                        if (tmp[0] == tid_can) {
+                        if (tmp[0] == tid_core) {
+                                if (cmd->src == ((CMD *)tmp[1])->src &&
+                                    cmd->dev == ((CMD *)tmp[1])->dev &&
+                                    cmd->mode == ((CMD *)tmp[1])->mode &&
+                                    cmd->act == ((CMD *)tmp[1])->act) {
+                                        for (i = 0; i < DEVS; i++) {
+                                                if (cmd->data.tls.relax.pick & 1 << i) {
+                                                        switch (cmd->data.tls.relax.link) {
+                                                        case 0:
+                                                                relax[i][LINK] = 0;
+                                                                break;
+                                                        case 1:
+                                                                relax[i][LINK] = 1;
+                                                                break;
+                                                        case 2:
+                                                                relax[i][LINK] = 2;
+                                                                break;
+                                                        case 3:
+                                                                relax[i][LINK] = 3;
+                                                                break;
+                                                        default:
+                                                                break;
+                                                        }
+                                                        switch (cmd->data.tls.relax.x) {
+                                                        case 0:
+                                                                relax[i][X] = 0;
+                                                                break;
+                                                        case 1:
+                                                                relax[i][X] = 100;
+                                                                break;
+                                                        case 2:
+                                                                relax[i][X] = 300;
+                                                                break;
+                                                        case 3:
+                                                                relax[i][X] = 1000;
+                                                                break;
+                                                        default:
+                                                                break;
+                                                        }
+                                                        switch (cmd->data.tls.relax.y) {
+                                                        case 0:
+                                                                relax[i][Y] = 0;
+                                                                break;
+                                                        case 1:
+                                                                relax[i][Y] = 100;
+                                                                break;
+                                                        case 2:
+                                                                relax[i][Y] = 300;
+                                                                break;
+                                                        case 3:
+                                                                relax[i][Y] = 1000;
+                                                                break;
+                                                        default:
+                                                                break;
+                                                        }
+                                                        switch (cmd->data.tls.relax.dx) {
+                                                        case 0:
+                                                                relax[i][DX] = 0;
+                                                                break;
+                                                        case 1:
+                                                                relax[i][DX] = 100;
+                                                                break;
+                                                        case 2:
+                                                                relax[i][DX] = 300;
+                                                                break;
+                                                        case 3:
+                                                                relax[i][DX] = 1000;
+                                                                break;
+                                                        default:
+                                                                break;
+                                                        }
+                                                        switch (cmd->data.tls.relax.dy) {
+                                                        case 0:
+                                                                relax[i][DY] = 0;
+                                                                break;
+                                                        case 1:
+                                                                relax[i][DY] = 100;
+                                                                break;
+                                                        case 2:
+                                                                relax[i][DY] = 300;
+                                                                break;
+                                                        case 3:
+                                                                relax[i][DY] = 1000;
+                                                                break;
+                                                        default:
+                                                                break;
+                                                        }
+                                                        switch (cmd->data.tls.relax.xd) {
+                                                        case 0:
+                                                                relax[i][XD] = 0;
+                                                                break;
+                                                        case 1:
+                                                                relax[i][XD] = 100;
+                                                                break;
+                                                        case 2:
+                                                                relax[i][XD] = 300;
+                                                                break;
+                                                        case 3:
+                                                                relax[i][XD] = 1000;
+                                                                break;
+                                                        default:
+                                                                break;
+                                                        }
+                                                        switch (cmd->data.tls.relax.yd) {
+                                                        case 0:
+                                                                relax[i][YD] = 0;
+                                                                break;
+                                                        case 1:
+                                                                relax[i][YD] = 100;
+                                                                break;
+                                                        case 2:
+                                                                relax[i][YD] = 300;
+                                                                break;
+                                                        case 3:
+                                                                relax[i][YD] = 1000;
+                                                                break;
+                                                        default:
+                                                                break;
+                                                        }
+                                                }
+                                        }
+                                }
+                                cmd = (CMD *)tmp[1];
+                                delay -= tickGet() - stamp;
+                        } else if (tmp[0] == tid_can) {
                                 switch (((CAN *)tmp[1])->id[0]) {
                                 case CA_TLS0:
-                                        tls = 0;
+                                        dev = 0;
                                         break;
                                 case CA_TLS1:
-                                        tls = 1;
+                                        dev = 1;
                                         break;
                                 default:
                                         break;
                                 }
-                                if (p[tls]->can) {
-                                        xsum[tls] -= *(s16 *)&p[tls]->can->data[0];
-                                        ysum[tls] -= *(s16 *)&p[tls]->can->data[2];
-                                        ctr[tls]--;
+                                if (p[dev]->can) {
+                                        xsum[dev] -= *(s16 *)&p[dev]->can->data[0];
+                                        ysum[dev] -= *(s16 *)&p[dev]->can->data[2];
+                                        ctr[dev]--;
                                 }
-                                p[tls]->can = (CAN *)tmp[1];
-                                prev[tls] = (PCAN *)lstPrevious((NODE *)p[tls]);
-                                xcur[tls] = *(s16 *)&p[tls]->can->data[0];
-                                ycur[tls] = *(s16 *)&p[tls]->can->data[2];
-                                err[tls] = *(u8 *)&p[tls]->can->data[6];
-                                xsum[tls] += xcur[tls];
-                                ysum[tls] += ycur[tls];
-                                ctr[tls]++;
-                                xavg[tls] = xsum[tls] / ctr[tls];
-                                yavg[tls] = ysum[tls] / ctr[tls];
-                                if (prev[tls]->can) {
-                                        dx[tls] = abs(xcur[tls] - * (s16 *)&prev[tls]->can->data[0]);
-                                        dy[tls] = abs(ycur[tls] - * (s16 *)&prev[tls]->can->data[2]);
+                                p[dev]->can = (CAN *)tmp[1];
+                                xcur[dev] = *(s16 *)&p[dev]->can->data[0] + cfg.xofs[dev];
+                                ycur[dev] = *(s16 *)&p[dev]->can->data[2] + cfg.yofs[dev];
+                                err[dev] = *(u8 *)&p[dev]->can->data[6];
+                                xsum[dev] += *(s16 *)&p[dev]->can->data[0];
+                                ysum[dev] += *(s16 *)&p[dev]->can->data[2];
+                                ctr[dev]++;
+                                xavg[dev] = xsum[dev] / ctr[dev] + cfg.xofs[dev];
+                                yavg[dev] = ysum[dev] / ctr[dev] + cfg.yofs[dev];
+                                prev[dev] = (PCAN *)lstPrevious((NODE *)p[dev]);
+                                if (prev[dev]->can) {
+                                        dx[dev] = abs(xcur[dev] - * (s16 *)&prev[dev]->can->data[0]);
+                                        dy[dev] = abs(ycur[dev] - * (s16 *)&prev[dev]->can->data[2]);
                                 } else {
-                                        dx[tls] = 0;
-                                        dy[tls] = 0;
+                                        dx[dev] = 0;
+                                        dy[dev] = 0;
                                 }
-                                if (p[0]->can && p[1]->can) {
-                                        xdiff = abs(xcur[0] - xcur[1]);
-                                        ydiff = abs(ycur[0] - ycur[1]);
-                                } else {
-                                        xdiff = 0;
-                                        ydiff = 0;
-                                }
-                                switch (sys_data.tls[tls].fault.x) {
+                                switch (sys_data.tls[dev].fault.x) {
                                 case NORMAL:
-                                        if (xcur[tls] > 2000 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = SERIOUS;
-                                        else if (xcur[tls] > 1000 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = GENERAL;
-                                        else if (xcur[tls] > 500 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = WARNING;
+                                        if (xcur[dev] > cfg.x[dev][2] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = SERIOUS;
+                                        else if (xcur[dev] > cfg.x[dev][1] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = GENERAL;
+                                        else if (xcur[dev] > cfg.x[dev][0] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = WARNING;
                                         break;
                                 case WARNING:
-                                        if (xcur[tls] > 2000 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = SERIOUS;
-                                        else if (xcur[tls] > 1000 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = GENERAL;
-                                        else if (xcur[tls] < 400 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = NORMAL;
+                                        if (xcur[dev] > cfg.x[dev][2] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = SERIOUS;
+                                        else if (xcur[dev] > cfg.x[dev][1] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = GENERAL;
+                                        else if (xcur[dev] < -100 + cfg.x[dev][0] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = NORMAL;
                                         break;
                                 case GENERAL:
-                                        if (xcur[tls] > 2000 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = SERIOUS;
-                                        else if (xcur[tls] < 400 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = NORMAL;
-                                        else if (xcur[tls] < 900 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = WARNING;
+                                        if (xcur[dev] > cfg.x[dev][2] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = SERIOUS;
+                                        else if (xcur[dev] < -100 + cfg.x[dev][0] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = NORMAL;
+                                        else if (xcur[dev] < -100 + cfg.x[dev][1] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = WARNING;
                                         break;
                                 case SERIOUS:
-                                        if (xcur[tls] < 400 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = NORMAL;
-                                        else if (xcur[tls] < 900 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = WARNING;
-                                        else if (xcur[tls] < 1900 + rlxx[tls])
-                                                sys_data.tls[tls].fault.x = GENERAL;
+                                        if (xcur[dev] < -100 + cfg.x[dev][0] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = NORMAL;
+                                        else if (xcur[dev] < -100 + cfg.x[dev][1] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = WARNING;
+                                        else if (xcur[dev] < -100 + cfg.x[dev][2] + relax[dev][X])
+                                                sys_data.tls[dev].fault.x = GENERAL;
                                         break;
                                 default:
                                         break;
                                 }
-                                switch (sys_data.tls[tls].fault.y) {
+                                switch (sys_data.tls[dev].fault.y) {
                                 case NORMAL:
-                                        if (ycur[tls] > 2000 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = SERIOUS;
-                                        else if (ycur[tls] > 1000 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = GENERAL;
-                                        else if (ycur[tls] > 500 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = WARNING;
+                                        if (ycur[dev] > cfg.y[dev][2] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = SERIOUS;
+                                        else if (ycur[dev] > cfg.y[dev][1] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = GENERAL;
+                                        else if (ycur[dev] > cfg.y[dev][0] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = WARNING;
                                         break;
                                 case WARNING:
-                                        if (ycur[tls] > 2000 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = SERIOUS;
-                                        else if (ycur[tls] > 1000 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = GENERAL;
-                                        else if (ycur[tls] < 400 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = NORMAL;
+                                        if (ycur[dev] > cfg.y[dev][2] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = SERIOUS;
+                                        else if (ycur[dev] > cfg.y[dev][1] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = GENERAL;
+                                        else if (ycur[dev] < -100 + cfg.y[dev][0] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = NORMAL;
                                         break;
                                 case GENERAL:
-                                        if (ycur[tls] > 2000 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = SERIOUS;
-                                        else if (ycur[tls] < 400 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = NORMAL;
-                                        else if (ycur[tls] < 900 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = WARNING;
+                                        if (ycur[dev] > cfg.y[dev][2] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = SERIOUS;
+                                        else if (ycur[dev] < -100 + cfg.y[dev][0] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = NORMAL;
+                                        else if (ycur[dev] < -100 + cfg.y[dev][1] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = WARNING;
                                         break;
                                 case SERIOUS:
-                                        if (ycur[tls] < 400 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = NORMAL;
-                                        else if (ycur[tls] < 900 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = WARNING;
-                                        else if (ycur[tls] < 1900 + rlxy[tls])
-                                                sys_data.tls[tls].fault.y = GENERAL;
+                                        if (ycur[dev] < -100 + cfg.y[dev][0] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = NORMAL;
+                                        else if (ycur[dev] < -100 + cfg.y[dev][1] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = WARNING;
+                                        else if (ycur[dev] < -100 + cfg.y[dev][2] + relax[dev][Y])
+                                                sys_data.tls[dev].fault.y = GENERAL;
                                         break;
                                 default:
                                         break;
                                 }
-                                switch (sys_data.tls[tls].fault.dx) {
+                                switch (sys_data.tls[dev].fault.dx) {
                                 case NORMAL:
-                                        if (dx[tls] > 600 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = SERIOUS;
-                                        else if (dx[tls] > 400 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = GENERAL;
-                                        else if (dx[tls] > 200 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = WARNING;
+                                        if (dx[dev] > cfg.dx[dev][2] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = SERIOUS;
+                                        else if (dx[dev] > cfg.dx[dev][1] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = GENERAL;
+                                        else if (dx[dev] > cfg.dx[dev][0] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = WARNING;
                                         break;
                                 case WARNING:
-                                        if (dx[tls] > 600 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = SERIOUS;
-                                        else if (dx[tls] > 400 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = GENERAL;
-                                        else if (dx[tls] < 100 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = NORMAL;
+                                        if (dx[dev] > cfg.dx[dev][2] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = SERIOUS;
+                                        else if (dx[dev] > cfg.dx[dev][1] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = GENERAL;
+                                        else if (dx[dev] < -100 + cfg.dx[dev][0] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = NORMAL;
                                         break;
                                 case GENERAL:
-                                        if (dx[tls] > 600 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = SERIOUS;
-                                        else if (dx[tls] < 100 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = NORMAL;
-                                        else if (dx[tls] < 300 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = WARNING;
+                                        if (dx[dev] > cfg.dx[dev][2] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = SERIOUS;
+                                        else if (dx[dev] < -100 + cfg.dx[dev][0] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = NORMAL;
+                                        else if (dx[dev] < -100 + cfg.dx[dev][1] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = WARNING;
                                         break;
                                 case SERIOUS:
-                                        if (dx[tls] < 100 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = NORMAL;
-                                        else if (dx[tls] < 300 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = WARNING;
-                                        else if (dx[tls] < 500 + rlxdx[tls])
-                                                sys_data.tls[tls].fault.dx = GENERAL;
+                                        if (dx[dev] < -100 + cfg.dx[dev][0] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = NORMAL;
+                                        else if (dx[dev] < -100 + cfg.dx[dev][1] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = WARNING;
+                                        else if (dx[dev] < -100 + cfg.dx[dev][2] + relax[dev][DX])
+                                                sys_data.tls[dev].fault.dx = GENERAL;
                                         break;
                                 default:
                                         break;
                                 }
-                                switch (sys_data.tls[tls].fault.dy) {
+                                switch (sys_data.tls[dev].fault.dy) {
                                 case NORMAL:
-                                        if (dy[tls] > 600 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = SERIOUS;
-                                        else if (dy[tls] > 400 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = GENERAL;
-                                        else if (dy[tls] > 200 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = WARNING;
+                                        if (dy[dev] > cfg.dy[dev][2] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = SERIOUS;
+                                        else if (dy[dev] > cfg.dy[dev][1] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = GENERAL;
+                                        else if (dy[dev] > cfg.dy[dev][0] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = WARNING;
                                         break;
                                 case WARNING:
-                                        if (dy[tls] > 600 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = SERIOUS;
-                                        else if (dy[tls] > 400 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = GENERAL;
-                                        else if (dy[tls] < 100 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = NORMAL;
+                                        if (dy[dev] > cfg.dy[dev][2] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = SERIOUS;
+                                        else if (dy[dev] > cfg.dy[dev][1] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = GENERAL;
+                                        else if (dy[dev] < -100 + cfg.dy[dev][0] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = NORMAL;
                                         break;
                                 case GENERAL:
-                                        if (dy[tls] > 600 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = SERIOUS;
-                                        else if (dy[tls] < 100 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = NORMAL;
-                                        else if (dy[tls] < 300 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = WARNING;
+                                        if (dy[dev] > cfg.dy[dev][2] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = SERIOUS;
+                                        else if (dy[dev] < -100 + cfg.dy[dev][0] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = NORMAL;
+                                        else if (dy[dev] < -100 + cfg.dy[dev][1] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = WARNING;
                                         break;
                                 case SERIOUS:
-                                        if (dy[tls] < 100 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = NORMAL;
-                                        else if (dy[tls] < 300 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = WARNING;
-                                        else if (dy[tls] < 500 + rlxdy[tls])
-                                                sys_data.tls[tls].fault.dy = GENERAL;
+                                        if (dy[dev] < -100 + cfg.dy[dev][0] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = NORMAL;
+                                        else if (dy[dev] < -100 + cfg.dy[dev][1] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = WARNING;
+                                        else if (dy[dev] < -100 + cfg.dy[dev][2] + relax[dev][DY])
+                                                sys_data.tls[dev].fault.dy = GENERAL;
                                         break;
                                 default:
                                         break;
                                 }
-                                switch (err[tls]) {
+                                switch (err[dev]) {
                                 case 0x00:
-                                        sys_data.tls[tls].fault.dev = NORMAL;
+                                        sys_data.tls[dev].fault.dev = NORMAL;
                                         break;
                                 case 0x0c:
-                                        sys_data.tls[tls].fault.dev = 1;
+                                        sys_data.tls[dev].fault.dev = 1;
                                         break;
                                 case 0xf0:
-                                        sys_data.tls[tls].fault.dev = 2;
+                                        sys_data.tls[dev].fault.dev = 2;
                                         break;
                                 case 0x03:
-                                        sys_data.tls[tls].fault.dev = 3;
+                                        sys_data.tls[dev].fault.dev = 3;
                                         break;
                                 default:
                                         break;
@@ -275,220 +434,102 @@ void t_tls(int period, int duration)
                                     sys_data.tls[0].fault.dx < GENERAL && sys_data.tls[1].fault.dx < GENERAL &&
                                     sys_data.tls[0].fault.dy < GENERAL && sys_data.tls[1].fault.dy < GENERAL &&
                                     sys_data.tls[0].fault.dev == NORMAL && sys_data.tls[1].fault.dev == NORMAL) {
-                                        for (i = 0; i < 2; i++) {
-                                                switch (sys_data.tls[i].fault.xdiff) {
+                                        if (p[0]->can && p[1]->can) {
+                                                xd = abs(xcur[0] - xcur[1]);
+                                                yd = abs(ycur[0] - ycur[1]);
+                                        } else {
+                                                xd = 0;
+                                                yd = 0;
+                                        }
+                                        for (i = 0; i < DEVS; i++) {
+                                                switch (sys_data.tls[i].fault.xd) {
                                                 case NORMAL:
-                                                        if (xdiff > 2000 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = SERIOUS;
-                                                        else if (xdiff > 1000 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = GENERAL;
-                                                        else if (xdiff > 500 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = WARNING;
+                                                        if (xd > cfg.xd[2] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = SERIOUS;
+                                                        else if (xd > cfg.xd[1] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = GENERAL;
+                                                        else if (xd > cfg.xd[0] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = WARNING;
                                                         break;
                                                 case WARNING:
-                                                        if (xdiff > 2000 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = SERIOUS;
-                                                        else if (xdiff > 1000 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = GENERAL;
-                                                        else if (xdiff < 400 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = NORMAL;
+                                                        if (xd > cfg.xd[2] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = SERIOUS;
+                                                        else if (xd > cfg.xd[1] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = GENERAL;
+                                                        else if (xd < -100 + cfg.xd[0] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = NORMAL;
                                                         break;
                                                 case GENERAL:
-                                                        if (xdiff > 2000 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = SERIOUS;
-                                                        else if (xdiff < 400 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = NORMAL;
-                                                        else if (xdiff < 900 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = WARNING;
+                                                        if (xd > cfg.xd[2] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = SERIOUS;
+                                                        else if (xd < -100 + cfg.xd[0] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = NORMAL;
+                                                        else if (xd < -100 + cfg.xd[1] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = WARNING;
                                                         break;
                                                 case SERIOUS:
-                                                        if (xdiff < 400 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = NORMAL;
-                                                        else if (xdiff < 900 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = WARNING;
-                                                        else if (xdiff < 1900 + rlxxd[tls])
-                                                                sys_data.tls[i].fault.xdiff = GENERAL;
+                                                        if (xd < -100 + cfg.xd[0] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = NORMAL;
+                                                        else if (xd < -100 + cfg.xd[1] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = WARNING;
+                                                        else if (xd < -100 + cfg.xd[2] + relax[dev][XD])
+                                                                sys_data.tls[i].fault.xd = GENERAL;
                                                         break;
                                                 default:
                                                         break;
                                                 }
-                                                switch (sys_data.tls[i].fault.ydiff) {
+                                                switch (sys_data.tls[i].fault.yd) {
                                                 case NORMAL:
-                                                        if (ydiff > 2000 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = SERIOUS;
-                                                        else if (ydiff > 1000 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = GENERAL;
-                                                        else if (ydiff > 500 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = WARNING;
+                                                        if (yd > cfg.yd[2] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = SERIOUS;
+                                                        else if (yd > cfg.yd[1] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = GENERAL;
+                                                        else if (yd > cfg.yd[0] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = WARNING;
                                                         break;
                                                 case WARNING:
-                                                        if (ydiff > 2000 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = SERIOUS;
-                                                        else if (ydiff > 1000 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = GENERAL;
-                                                        else if (ydiff < 400 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = NORMAL;
+                                                        if (yd > cfg.yd[2] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = SERIOUS;
+                                                        else if (yd > cfg.yd[1] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = GENERAL;
+                                                        else if (yd < -100 + cfg.yd[0] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = NORMAL;
                                                         break;
                                                 case GENERAL:
-                                                        if (ydiff > 2000 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = SERIOUS;
-                                                        else if (ydiff < 400 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = NORMAL;
-                                                        else if (ydiff < 900 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = WARNING;
+                                                        if (yd > cfg.yd[2] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = SERIOUS;
+                                                        else if (yd < -100 + cfg.yd[0] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = NORMAL;
+                                                        else if (yd < -100 + cfg.yd[1] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = WARNING;
                                                         break;
                                                 case SERIOUS:
-                                                        if (ydiff < 400 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = NORMAL;
-                                                        else if (ydiff < 900 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = WARNING;
-                                                        else if (ydiff < 1900 + rlxyd[tls])
-                                                                sys_data.tls[i].fault.ydiff = GENERAL;
+                                                        if (yd < -100 + cfg.yd[0] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = NORMAL;
+                                                        else if (yd < -100 + cfg.yd[1] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = WARNING;
+                                                        else if (yd < -100 + cfg.yd[2] + relax[dev][YD])
+                                                                sys_data.tls[i].fault.yd = GENERAL;
                                                         break;
                                                 default:
                                                         break;
                                                 }
                                         }
                                 } else {
-                                        sys_data.tls[0].fault.xdiff = NORMAL;
-                                        sys_data.tls[1].fault.xdiff = NORMAL;
-                                        sys_data.tls[0].fault.ydiff = NORMAL;
-                                        sys_data.tls[1].fault.ydiff = NORMAL;
+                                        sys_data.tls[0].fault.xd = NORMAL;
+                                        sys_data.tls[0].fault.yd = NORMAL;
+                                        sys_data.tls[1].fault.xd = NORMAL;
+                                        sys_data.tls[1].fault.yd = NORMAL;
                                 }
-                                sys_data.tls[tls].x = xcur[tls];
-                                sys_data.tls[tls].y = ycur[tls];
-                                p[tls] = (PCAN *)lstNext((NODE *)p[tls]);
-                                delay -= tickGet() - stamp;
-                        } else if (tmp[0] == tid_core) {
-                                cmd = (CMD *)tmp[1];
-                                if (cmd->src == ((CMD *)tmp[1])->src &&
-                                    cmd->dev == ((CMD *)tmp[1])->dev &&
-                                    cmd->mode == ((CMD *)tmp[1])->mode &&
-                                    cmd->act == ((CMD *)tmp[1])->act) {
-                                        for (i = 0; i < 2; i++) {
-                                                if (cmd->data.tls.relax.pick & 1 << i) {
-                                                        switch (cmd->data.tls.relax.link) {
-                                                        case 0:
-                                                                rlxlink[i] = 0;
-                                                                break;
-                                                        case 1:
-                                                                rlxlink[i] = 1;
-                                                                break;
-                                                        case 2:
-                                                                rlxlink[i] = 2;
-                                                                break;
-                                                        case 3:
-                                                                rlxlink[i] = 3;
-                                                                break;
-                                                        default:
-                                                                break;
-                                                        }
-                                                }
-                                                if (cmd->data.tls.relax.pick & 1 << i) {
-                                                        switch (cmd->data.tls.relax.x) {
-                                                        case 0:
-                                                                rlxx[i] = 0;
-                                                                break;
-                                                        case 1:
-                                                                rlxx[i] = 100;
-                                                                break;
-                                                        case 2:
-                                                                rlxx[i] = 300;
-                                                                break;
-                                                        case 3:
-                                                                rlxx[i] = 1000;
-                                                                break;
-                                                        default:
-                                                                break;
-                                                        }
-                                                        switch (cmd->data.tls.relax.y) {
-                                                        case 0:
-                                                                rlxy[i] = 0;
-                                                                break;
-                                                        case 1:
-                                                                rlxy[i] = 100;
-                                                                break;
-                                                        case 2:
-                                                                rlxy[i] = 300;
-                                                                break;
-                                                        case 3:
-                                                                rlxy[i] = 1000;
-                                                                break;
-                                                        default:
-                                                                break;
-                                                        }
-                                                        switch (cmd->data.tls.relax.dx) {
-                                                        case 0:
-                                                                rlxdx[i] = 0;
-                                                                break;
-                                                        case 1:
-                                                                rlxdx[i] = 100;
-                                                                break;
-                                                        case 2:
-                                                                rlxdx[i] = 300;
-                                                                break;
-                                                        case 3:
-                                                                rlxdx[i] = 1000;
-                                                                break;
-                                                        default:
-                                                                break;
-                                                        }
-                                                        switch (cmd->data.tls.relax.dy) {
-                                                        case 0:
-                                                                rlxdy[i] = 0;
-                                                                break;
-                                                        case 1:
-                                                                rlxdy[i] = 100;
-                                                                break;
-                                                        case 2:
-                                                                rlxdy[i] = 300;
-                                                                break;
-                                                        case 3:
-                                                                rlxdy[i] = 1000;
-                                                                break;
-                                                        default:
-                                                                break;
-                                                        }
-                                                        switch (cmd->data.tls.relax.xdiff) {
-                                                        case 0:
-                                                                rlxxd[i] = 0;
-                                                                break;
-                                                        case 1:
-                                                                rlxxd[i] = 100;
-                                                                break;
-                                                        case 2:
-                                                                rlxxd[i] = 300;
-                                                                break;
-                                                        case 3:
-                                                                rlxxd[i] = 1000;
-                                                                break;
-                                                        default:
-                                                                break;
-                                                        }
-                                                        switch (cmd->data.tls.relax.ydiff) {
-                                                        case 0:
-                                                                rlxyd[i] = 0;
-                                                                break;
-                                                        case 1:
-                                                                rlxyd[i] = 100;
-                                                                break;
-                                                        case 2:
-                                                                rlxyd[i] = 300;
-                                                                break;
-                                                        case 3:
-                                                                rlxyd[i] = 1000;
-                                                                break;
-                                                        default:
-                                                                break;
-                                                        }
-                                                }
-                                        }
-                                }
+                                sys_data.tls[dev].x = xcur[dev];
+                                sys_data.tls[dev].y = ycur[dev];
+                                p[dev] = (PCAN *)lstNext((NODE *)p[dev]);
                                 delay -= tickGet() - stamp;
                         } else {
                                 for (i = 0; i < 2; i++) {
+                                        prev[i] = (PCAN *)lstPrevious((NODE *)p[i]);
                                         if (prev[i]->can) {
-                                                if (tickGet() - prev[i]->can->ts < period * 1.1) {
+                                                if (tickGet() - prev[i]->can->ts < period) {
                                                         if (link[i][YES] < 10)
                                                                 link[i][YES]++;
                                                         link[i][NO] = 0;
@@ -503,35 +544,35 @@ void t_tls(int period, int duration)
                                         }
                                         switch (sys_data.tls[i].fault.link) {
                                         case NORMAL:
-                                                if (link[i][NO] > 2 + rlxlink[i])
+                                                if (link[i][NO] > 2 + relax[i][LINK])
                                                         sys_data.tls[i].fault.link = SERIOUS;
-                                                else if (link[i][NO] > 1 + rlxlink[i])
+                                                else if (link[i][NO] > 1 + relax[i][LINK])
                                                         sys_data.tls[i].fault.link = GENERAL;
-                                                else if (link[i][NO] > 0 + rlxlink[i])
+                                                else if (link[i][NO] > 0 + relax[i][LINK])
                                                         sys_data.tls[i].fault.link = WARNING;
                                                 break;
                                         case WARNING:
-                                                if (link[i][NO] > 2 + rlxlink[i])
+                                                if (link[i][NO] > 2 + relax[i][LINK])
                                                         sys_data.tls[i].fault.link = SERIOUS;
-                                                else if (link[i][NO] > 1 + rlxlink[i])
+                                                else if (link[i][NO] > 1 + relax[i][LINK])
                                                         sys_data.tls[i].fault.link = GENERAL;
-                                                else if (link[i][YES] > 9 - rlxlink[i])
+                                                else if (link[i][YES] > 9 - relax[i][LINK])
                                                         sys_data.tls[i].fault.link = NORMAL;
                                                 break;
                                         case GENERAL:
-                                                if (link[i][NO] > 2 + rlxlink[i])
+                                                if (link[i][NO] > 2 + relax[i][LINK])
                                                         sys_data.tls[i].fault.link = SERIOUS;
-                                                else if (link[i][YES] > 9 - rlxlink[i])
+                                                else if (link[i][YES] > 9 - relax[i][LINK])
                                                         sys_data.tls[i].fault.link = NORMAL;
-                                                else if (link[i][YES] > 8 - rlxlink[i])
+                                                else if (link[i][YES] > 8 - relax[i][LINK])
                                                         sys_data.tls[i].fault.link = WARNING;
                                                 break;
                                         case SERIOUS:
-                                                if (link[i][YES] > 9 - rlxlink[i])
+                                                if (link[i][YES] > 9 - relax[i][LINK])
                                                         sys_data.tls[i].fault.link = NORMAL;
-                                                else if (link[i][YES] > 8 - rlxlink[i])
+                                                else if (link[i][YES] > 8 - relax[i][LINK])
                                                         sys_data.tls[i].fault.link = WARNING;
-                                                else if (link[i][YES] > 7 - rlxlink[i])
+                                                else if (link[i][YES] > 7 - relax[i][LINK])
                                                         sys_data.tls[i].fault.link = GENERAL;
                                                 break;
                                         default:
