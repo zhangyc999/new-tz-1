@@ -43,8 +43,8 @@ typedef struct {
                                 u8 ymax: 2;
                                 u8 zmin: 2;
                                 u8 zmax: 2;
-                                u8 toonear: 2;
-                                u8 toofar: 2;
+                                u8 dismin: 2;
+                                u8 dismax: 2;
                                 u8 : 6;
                                 u8 res;
                                 u32 pick;
