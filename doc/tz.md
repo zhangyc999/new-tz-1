@@ -22,7 +22,7 @@
 | 19 | addr_server | 服务器（主控）地址 |
 | 20 | addr_group | 组播地址 |
 | 21 | msg_core | 主任务消息队列ID |
-| 22 | msg_can | CAN通信消息队列ID |
+| 22 | msg_can | CAN通信发送消息队列ID |
 | 23 | msg_tls | 倾角传感器消息队列ID |
 | 24 | msg_vsl | 视觉定位消息队列ID |
 | 25 | msg_psu | 供电单元消息队列ID |
