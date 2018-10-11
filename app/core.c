@@ -2,7 +2,6 @@
 #include "canaddr.h"
 #include "cmd.h"
 #include "data.h"
-#include "type.h"
 #include "vx.h"
 
 extern int tid_swh;
@@ -32,43 +31,43 @@ void t_core(int period)
                 int tid;
                 CMD *p;
         } recv, send;
-        u8 swh0 = 0;
-        u8 swh1 = 1;
-        u8 swh2 = 2;
-        u8 swh3 = 3;
-        u8 swv0 = 8;
-        u8 swv1 = 9;
-        u8 swv2 = 10;
-        u8 swv3 = 11;
-        u8 prp0 = 12;
-        u8 prp1 = 13;
-        u8 prp2 = 14;
-        u8 prp3 = 15;
-        u8 x0 = 16;
-        u8 x1 = 17;
-        u8 y0 = 18;
-        u8 y1 = 19;
-        u8 y2 = 20;
-        u8 y3 = 21;
-        u8 z0 = 22;
-        u8 z1 = 23;
-        u8 shdf0 = 24;
-        u8 shdf1 = 25;
-        u8 shdf2 = 26;
-        u8 shdf3 = 27;
-        u8 shdb0 = 28;
-        u8 shdb1 = 29;
-        u8 shdb2 = 30;
-        u8 shdb3 = 31;
-        u8 shds0 = 32;
-        u8 shds1 = 33;
-        u8 shds2 = 34;
-        u8 shds3 = 35;
-        u8 shdt = 36;
-        u8 mom0 = 37;
-        u8 mom1 = 38;
-        u8 mom2 = 39;
-        u8 mom3 = 40;
+        unsigned char swh0 = 0;
+        unsigned char swh1 = 1;
+        unsigned char swh2 = 2;
+        unsigned char swh3 = 3;
+        unsigned char swv0 = 8;
+        unsigned char swv1 = 9;
+        unsigned char swv2 = 10;
+        unsigned char swv3 = 11;
+        unsigned char prp0 = 12;
+        unsigned char prp1 = 13;
+        unsigned char prp2 = 14;
+        unsigned char prp3 = 15;
+        unsigned char x0 = 16;
+        unsigned char x1 = 17;
+        unsigned char y0 = 18;
+        unsigned char y1 = 19;
+        unsigned char y2 = 20;
+        unsigned char y3 = 21;
+        unsigned char z0 = 22;
+        unsigned char z1 = 23;
+        unsigned char shdf0 = 24;
+        unsigned char shdf1 = 25;
+        unsigned char shdf2 = 26;
+        unsigned char shdf3 = 27;
+        unsigned char shdb0 = 28;
+        unsigned char shdb1 = 29;
+        unsigned char shdb2 = 30;
+        unsigned char shdb3 = 31;
+        unsigned char shds0 = 32;
+        unsigned char shds1 = 33;
+        unsigned char shds2 = 34;
+        unsigned char shds3 = 35;
+        unsigned char shdt = 36;
+        unsigned char mom0 = 37;
+        unsigned char mom1 = 38;
+        unsigned char mom2 = 39;
+        unsigned char mom3 = 40;
         send.tid = taskIdSelf();
         for (;;) {
                 if (sys_data.psu.v24.leg0 && sys_data.psu.v500.leg0 &&
@@ -158,61 +157,61 @@ void t_core(int period)
                         memset(&sys_data.srv[mom3].fault, 0, 4);
                 }
         }
-        if (8 == msgQReceive(msg_core, (str)&recv, 8, period)) {
+        if (8 == msgQReceive(msg_core, (char *)&recv, 8, period)) {
                 switch (recv.p->dev) {
                 case CMD_DEV_TLS:
                         send.p = recv.p;
-                        msgQSend(msg_tls, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_tls, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_VSL:
                         send.p = recv.p;
-                        msgQSend(msg_vsl, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_psu, (str)&send, 4, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_vsl, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 4, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_PSU:
                         send.p = recv.p;
-                        msgQSend(msg_psu, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SWH:
                         send.p = recv.p;
-                        msgQSend(msg_psu, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swh, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_RSE:
                         send.p = recv.p;
-                        msgQSend(msg_psu, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SWV:
                         send.p = recv.p;
-                        msgQSend(msg_psu, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_PRP:
                         send.p = recv.p;
-                        msgQSend(msg_psu, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_XYZ:
                         send.p = recv.p;
-                        msgQSend(msg_psu, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_DEV_SHD:
                         send.p = recv.p;
-                        msgQSend(msg_psu, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 case CMD_SRV_ALL:
                         send.p = recv.p;
-                        msgQSend(msg_swh, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         break;
                 default:
                         break;

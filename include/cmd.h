@@ -1,7 +1,6 @@
 #ifndef CMD_H_
 #define CMD_H_
 
-#include "type.h"
 #include "vx.h"
 
 #define HAMMING_74(x)                              \
@@ -10,130 +9,130 @@
 ((x) & 4) >> 1 ^ (x) & 2 ^ ((x) & 1) << 1 |        \
 (x) << 4)
 
-typedef struct {
+struct cmd {
         NODE node;
-        u16 head;
-        u16 len;
-        u8 src;
-        u8 dev;
-        u8 mode;
-        u8 act;
+        unsigned short head; /* 固定帧头 */
+        unsigned short len; /* 从head开始到chk结束共计字节总数 */
+        unsigned char src;
+        unsigned char dev;
+        unsigned char mode;
+        unsigned char act;
         union {
-                str data;
                 union {
                         struct {
-                                u8 link: 2;
-                                u8 xmin: 2;
-                                u8 xmax: 2;
-                                u8 ymin: 2;
-                                u8 ymax: 2;
-                                u8 dx: 2;
-                                u8 dy: 2;
-                                u8 xd: 2;
-                                u8 yd: 2;
-                                u8 : 6;
-                                u8 res;
-                                u32 pick;
-                        } relax;
-                } tls;
+                                unsigned char link: 2; /* 通信 */
+                                unsigned char pmin: 2; /* 俯仰过小 */
+                                unsigned char pmax: 2; /*  */
+                                unsigned char rmin: 2; /*  */
+                                unsigned char rmax: 2; /* 横滚过大 */
+                                unsigned char dp: 2; /* 俯仰突变 */
+                                unsigned char dr: 2; /*  */
+                                unsigned char pdiff: 2; /* 俯仰不一致 */
+                                unsigned char rdiff: 2; /*  */
+                                unsigned char : 6;
+                                unsigned char res;
+                                unsigned pick; /* 选择 */
+                        } relax; /* 降级使用 0/1/2/3：不降级/一次降级/二次降级/三次降级 */
+                } tls; /* 倾角传感器 */
                 union {
                         struct {
-                                u8 link: 2;
-                                u8 xmin: 2;
-                                u8 xmax: 2;
-                                u8 ymin: 2;
-                                u8 ymax: 2;
-                                u8 zmin: 2;
-                                u8 zmax: 2;
-                                u8 dismin: 2;
-                                u8 dismax: 2;
-                                u8 : 6;
-                                u8 res;
-                                u32 pick;
+                                unsigned char link: 2; /*  */
+                                unsigned char xmin: 2; /*  */
+                                unsigned char xmax: 2; /*  */
+                                unsigned char ymin: 2; /*  */
+                                unsigned char ymax: 2; /*  */
+                                unsigned char zmin: 2; /*  */
+                                unsigned char zmax: 2; /*  */
+                                unsigned char dmin: 2; /* 前后距离过小 */
+                                unsigned char dmax: 2; /*  */
+                                unsigned char : 6;
+                                unsigned char res;
+                                unsigned pick; /*  */
                         } relax;
                         struct {
-                                u8 proc;
-                                u8 res[3];
-                                u32 pick;
+                                unsigned char proc; /*  */
+                                unsigned char res[3];
+                                unsigned pick; /*  */
                         } photo;
                 } vsl;
                 union {
                         struct {
-                                u8 link: 2;
-                                u8 v24min: 2;
-                                u8 v24max: 2;
-                                u8 a24min: 2;
-                                u8 a24max: 2;
-                                u8 v500min: 2;
-                                u8 v500max: 2;
-                                u8 a500min: 2;
-                                u8 a500max: 2;
-                                u8 dv24: 2;
-                                u8 da24: 2;
-                                u8 dv500: 2;
-                                u8 da500: 2;
-                                u8 : 6;
-                                u8 res[4];
+                                unsigned char link: 2; /*  */
+                                unsigned char v24min: 2; /* 24V电压过低 */
+                                unsigned char v24max: 2; /*  */
+                                unsigned char a24min: 2; /*  */
+                                unsigned char a24max: 2; /*  */
+                                unsigned char v500min: 2; /*  */
+                                unsigned char v500max: 2; /*  */
+                                unsigned char a500min: 2; /*  */
+                                unsigned char a500max: 2; /*  */
+                                unsigned char dv24: 2; /*  */
+                                unsigned char da24: 2; /*  */
+                                unsigned char dv500: 2; /*  */
+                                unsigned char da500: 2; /* 500V电流突变 */
+                                unsigned char : 6;
+                                unsigned char res[4];
                         } relax;
                         struct {
-                                u8 : 8;
-                                u8 : 1;
-                                u8 light: 1;
-                                u8 m5: 1;
-                                u8 m7: 1;
-                                u8 : 4;
-                                u8 mom: 1;
-                                u8 shdb: 1;
-                                u8 shdf: 1;
-                                u8 : 5;
-                                u8 shdst: 1;
-                                u8 leg0: 1;
-                                u8 leg3: 1;
-                                u8 leg1: 1;
-                                u8 leg2: 1;
-                                u8 xyzb: 1;
-                                u8 xyzf: 1;
-                                u8 : 1;
-                                u8 res[4];
+                                unsigned char : 8;
+                                unsigned char : 1;
+                                unsigned char light: 1;
+                                unsigned char m5: 1;
+                                unsigned char m7: 1;
+                                unsigned char : 4;
+                                unsigned char mom: 1;
+                                unsigned char shdb: 1;
+                                unsigned char shdf: 1;
+                                unsigned char : 5;
+                                unsigned char shdst: 1;
+                                unsigned char leg0: 1;
+                                unsigned char leg3: 1;
+                                unsigned char leg1: 1;
+                                unsigned char leg2: 1;
+                                unsigned char xyzb: 1;
+                                unsigned char xyzf: 1;
+                                unsigned char : 1;
+                                unsigned char res[4];
                         } toggle;
                 } psu;
                 union {
                         struct {
-                                u8 link: 2;
-                                u8 sync: 2;
-                                u8 pmin: 2;
-                                u8 pmax: 2;
-                                u8 vel: 2;
-                                u8 amin: 2;
-                                u8 amax: 2;
-                                u8 dp: 2;
-                                u8 dv: 2;
-                                u8 da: 2;
-                                u8 smin: 2;
-                                u8 smax: 2;
-                                u8 res;
-                                u32 pick;
+                                unsigned char link: 2;
+                                unsigned char sync: 2;
+                                unsigned char pmin: 2; /* 位置反向超限 */
+                                unsigned char pmax: 2;
+                                unsigned char vmin: 2;
+                                unsigned char vmax: 2; /* 速度正向超限 */
+                                unsigned char amin: 2; /* 电流反向超限 */
+                                unsigned char amax: 2;
+                                unsigned char dp: 2;
+                                unsigned char dv: 2;
+                                unsigned char da: 2;
+                                unsigned char smin: 2; /* 行程反向超限 */
+                                unsigned char smax: 2;
+                                unsigned char : 6;
+                                unsigned pick;
                         } relax;
                         struct {
-                                u8 res[4];
-                                u32 pick;
-                        } stupid;
+                                unsigned char res[4];
+                                unsigned pick;
+                        } stupid; /* 自动模式 */
                         struct {
-                                s16 vel;
-                                u8 res[2];
-                                u32 pick;
-                        } manual;
+                                short vel;
+                                unsigned char res[2];
+                                unsigned pick;
+                        } manual; /* 手动模式 */
                         struct {
-                                s16 vel;
-                                u8 res[2];
-                                u32 pick;
-                        } expert;
+                                short vel;
+                                unsigned char res[2];
+                                unsigned pick;
+                        } expert; /* 专家模式 */
                 } srv;
         } data;
-        u32 ts;
-        u8 res[3];
-        u8 chk;
-} CMD;
+        unsigned ts;
+        unsigned char res[3];
+        unsigned char chk;
+};
 
 #define CMD_IDLE 0x00
 

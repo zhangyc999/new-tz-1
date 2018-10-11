@@ -2,7 +2,6 @@
 #include "canaddr.h"
 #include "cmd.h"
 #include "data.h"
-#include "type.h"
 #include "vx.h"
 
 #define NO  0
@@ -30,7 +29,7 @@ void t_vsl(int period, int duration)
 {
         struct {
                 int tid;
-                CAN *p;
+                struct ext *p;
         } send;
         struct {
                 int xofs[DEVS];
@@ -65,12 +64,12 @@ void t_vsl(int period, int duration)
         int relax[DEVS][16] = {{0}, {0}};
         int i, j;
         int fd = open("/vsl.cfg", O_RDWR, 0644);
-        u8 dev;
+        unsigned char dev;
         CMD *cmd;
-        CAN can[DEVS];
-        PCAN buf[DEVS][duration];
-        PCAN *p[DEVS];
-        PCAN *prev[DEVS];
+        struct ext can[DEVS];
+        struct can buf[DEVS][duration];
+        struct can *p[DEVS];
+        struct can *prev[DEVS];
         LIST lst[DEVS];
         memset(buf, 0, sizeof(buf));
         cfg.xofs[0] = 0;
@@ -80,47 +79,47 @@ void t_vsl(int period, int duration)
         cfg.zofs[0] = 0;
         cfg.zofs[1] = 0;
         cfg.xmin[0][0] = 500;
-        cfg.xmin[0][1] = 1000;
-        cfg.xmin[0][2] = 2000;
-        cfg.xmin[1][0] = 500;
-        cfg.xmin[1][1] = 1000;
-        cfg.xmin[1][2] = 2000;
         cfg.xmax[0][0] = 500;
+        cfg.xmin[0][1] = 1000;
         cfg.xmax[0][1] = 1000;
+        cfg.xmin[0][2] = 2000;
         cfg.xmax[0][2] = 2000;
+        cfg.xmin[1][0] = 500;
         cfg.xmax[1][0] = 500;
+        cfg.xmin[1][1] = 1000;
         cfg.xmax[1][1] = 1000;
+        cfg.xmin[1][2] = 2000;
         cfg.xmax[1][2] = 2000;
         cfg.ymin[0][0] = 500;
-        cfg.ymin[0][1] = 1000;
-        cfg.ymin[0][2] = 2000;
-        cfg.ymin[1][0] = 500;
-        cfg.ymin[1][1] = 1000;
-        cfg.ymin[1][2] = 2000;
         cfg.ymax[0][0] = 500;
+        cfg.ymin[0][1] = 1000;
         cfg.ymax[0][1] = 1000;
+        cfg.ymin[0][2] = 2000;
         cfg.ymax[0][2] = 2000;
+        cfg.ymin[1][0] = 500;
         cfg.ymax[1][0] = 500;
+        cfg.ymin[1][1] = 1000;
         cfg.ymax[1][1] = 1000;
+        cfg.ymin[1][2] = 2000;
         cfg.ymax[1][2] = 2000;
         cfg.dismin = 1000;
         cfg.dismax = 1000;
         if (fd)
-                read(fd, (str)&cfg, sizeof(cfg));
+                read(fd, (char *)&cfg, sizeof(cfg));
         for (i = 0; i < DEVS; i++) {
                 lstInit(&lst[i]);
                 for (j = 0; j < duration; j++)
                         lstAdd(&lst[i], (NODE *)&buf[i][j]);
                 lstFirst(&lst[i])->previous = lstLast(&lst[i]);
                 lstLast(&lst[i])->next = lstFirst(&lst[i]);
-                p[i] = (PCAN *)lstFirst(&lst[i]);
+                p[i] = (struct can *)lstFirst(&lst[i]);
         }
         send.tid = taskIdSelf();
         for (;;) {
                 stamp = tickGet();
                 if (delay < 0 || delay > period)
                         delay = 0;
-                if (8 == msgQReceive(msg_vsl, (str)tmp, 8, delay)) {
+                if (8 == msgQReceive(msg_vsl, (char *)tmp, 8, delay)) {
                         if (tmp[0] == tid_core) {
                                 if (cmd->src == ((CMD *)tmp[1])->src &&
                                     cmd->dev == ((CMD *)tmp[1])->dev &&
@@ -246,7 +245,7 @@ void t_vsl(int period, int duration)
                                 cmd = (CMD *)tmp[1];
                                 delay -= tickGet() - stamp;
                         } else if (tmp[0] == tid_can) {
-                                switch (((CAN *)tmp[1])->id[0]) {
+                                switch (((struct ext *)tmp[1])->id[0]) {
                                 case CA_VSL0:
                                         dev = 0;
                                         break;
@@ -257,24 +256,24 @@ void t_vsl(int period, int duration)
                                         break;
                                 }
                                 if (p[dev]->can) {
-                                        xsum[dev] -= *(s16 *)&p[dev]->can->data[0];
-                                        ysum[dev] -= *(s16 *)&p[dev]->can->data[2];
+                                        xsum[dev] -= *(short *)&p[dev]->can->data[0];
+                                        ysum[dev] -= *(short *)&p[dev]->can->data[2];
                                         ctr[dev]--;
                                 }
-                                p[dev]->can = (CAN *)tmp[1];
-                                xcur[dev] = *(s16 *)&p[dev]->can->data[0] + cfg.xofs[dev];
-                                ycur[dev] = *(s16 *)&p[dev]->can->data[2] + cfg.yofs[dev];
-                                zcur[dev] = *(s16 *)&p[dev]->can->data[4] + cfg.zofs[dev];
-                                err[dev] = *(u8 *)&p[dev]->can->data[6];
-                                proc[dev] = *(u8 *)&p[dev]->can->data[7];
-                                xsum[dev] += *(s16 *)&p[dev]->can->data[0];
-                                ysum[dev] += *(s16 *)&p[dev]->can->data[2];
-                                zsum[dev] += *(s16 *)&p[dev]->can->data[4];
+                                p[dev]->can = (struct ext *)tmp[1];
+                                xcur[dev] = *(short *)&p[dev]->can->data[0] + cfg.xofs[dev];
+                                ycur[dev] = *(short *)&p[dev]->can->data[2] + cfg.yofs[dev];
+                                zcur[dev] = *(short *)&p[dev]->can->data[4] + cfg.zofs[dev];
+                                err[dev] = *(unsigned char *)&p[dev]->can->data[6];
+                                proc[dev] = *(unsigned char *)&p[dev]->can->data[7];
+                                xsum[dev] += *(short *)&p[dev]->can->data[0];
+                                ysum[dev] += *(short *)&p[dev]->can->data[2];
+                                zsum[dev] += *(short *)&p[dev]->can->data[4];
                                 ctr[dev]++;
                                 xavg[dev] = xsum[dev] / ctr[dev] + cfg.xofs[dev];
                                 yavg[dev] = ysum[dev] / ctr[dev] + cfg.yofs[dev];
                                 zavg[dev] = zsum[dev] / ctr[dev] + cfg.zofs[dev];
-                                prev[dev] = (PCAN *)lstPrevious((NODE *)p[dev]);
+                                prev[dev] = (struct can *)lstPrevious((NODE *)p[dev]);
                                 switch (sys_data.vsl[dev].fault.xmin) {
                                 case NORMAL:
                                         if (xcur[dev] < -10 + cfg.xmin[dev][2] - relax[dev][XMIN])
@@ -527,11 +526,11 @@ void t_vsl(int period, int duration)
                                 }
                                 sys_data.vsl[dev].x = xcur[dev];
                                 sys_data.vsl[dev].y = ycur[dev];
-                                p[dev] = (PCAN *)lstNext((NODE *)p[dev]);
+                                p[dev] = (struct can *)lstNext((NODE *)p[dev]);
                                 delay -= tickGet() - stamp;
                         } else {
                                 for (i = 0; i < 2; i++) {
-                                        prev[i] = (PCAN *)lstPrevious((NODE *)p[i]);
+                                        prev[i] = (struct can *)lstPrevious((NODE *)p[i]);
                                         if (prev[i]->can) {
                                                 if (tickGet() - prev[i]->can->ts < period) {
                                                         if (link[i][YES] < 10)
@@ -596,7 +595,7 @@ void t_vsl(int period, int duration)
                                 can[0].data[6] = 0x66;
                                 can[0].data[7] = 0x77;
                                 send.p = &can[0];
-                                msgQSend(msg_can[0][0], (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_can[0][0], (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 can[1].id[0] = CA_MAIN;
                                 can[1].id[1] = CA_TLS1;
                                 can[1].id[2] = 0x5c;
@@ -610,7 +609,7 @@ void t_vsl(int period, int duration)
                                 can[1].data[6] = 0x66;
                                 can[1].data[7] = 0x77;
                                 send.p = &can[1];
-                                msgQSend(msg_can[1][0], (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_can[1][0], (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 delay = period;
                         }
                 }

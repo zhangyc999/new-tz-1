@@ -1,7 +1,6 @@
-#include "type.h"
 #include "vx.h"
 
-static int id2index(u8 id);
+static int id2index(unsigned char id);
 
 void t_rse(void)
 {
@@ -12,10 +11,10 @@ void t_rse(void)
         static int j;
         static int index;
         static int lock;
-        static u8 tmp[sizeof(CAN)];
-        static CAN buf[4][16];
-        static CAN *tmp;
-        static CAN *p[4];
+        static unsigned char tmp[sizeof(struct ext)];
+        static struct ext buf[4][16];
+        static struct ext *tmp;
+        static struct ext *p[4];
         static UDP_RX udp;
         static LIST lst[4];
         for (i = 0; i < 4; i++) {
@@ -24,29 +23,29 @@ void t_rse(void)
                         lstAdd(&lst[i], (NODE *)&buf[i][j]);
                 lstFirst(&lst[i])->previous = lstLast(&lst[i]);
                 lstLast(&lst[i])->next = lstFirst(&lst[i]);
-                p[i] = (CAN *)lstFirst(&lst[i]);
+                p[i] = (struct ext *)lstFirst(&lst[i]);
         }
         taskSuspend(0);
         for (;;) {
                 prev = tickGet();
                 if (delay < 0 || delay > period)
                         delay = 0;
-                len = msgQReceive(msg_rse, (str)tmp, sizeof(tmp), delay);
+                len = msgQReceive(msg_rse, (char *)tmp, sizeof(tmp), delay);
                 switch (len) {
-                case sizeof(CAN):
+                case sizeof(struct ext):
                         if (tmp->id[2] == 0xC6) {
                                 index = id2index(tmp->id[0]);
                                 if (index > 0 && index < 5) {
                                         index -= 1;
                                         *p = *tmp;
-                                        sum_pos[index] -= (int)(*(s16 *)(&tmp->data[0])) * 20;
-                                        sum_vel[index] -= (int)(*(s16 *)(&tmp->data[2]));
-                                        sum_ampr[index] -= (int)(*(s16 *)(&tmp->data[4]));
-                                        cur_pos[index] = (int)(*(s16 *)(&p->data[0])) * 20;
-                                        cur_vel[index] = (int)(*(s16 *)(&p->data[2]));
-                                        cur_ampr[index] = (int)(*(s16 *)(&p->data[4]));
-                                        cur_fault[index] = (int)(*(u8 *)(&p->data[6]));
-                                        cur_io[index] = (int)(*(u8 *)(&p->data[7]));
+                                        sum_pos[index] -= (int)(*(short *)(&tmp->data[0])) * 20;
+                                        sum_vel[index] -= (int)(*(short *)(&tmp->data[2]));
+                                        sum_ampr[index] -= (int)(*(short *)(&tmp->data[4]));
+                                        cur_pos[index] = (int)(*(short *)(&p->data[0])) * 20;
+                                        cur_vel[index] = (int)(*(short *)(&p->data[2]));
+                                        cur_ampr[index] = (int)(*(short *)(&p->data[4]));
+                                        cur_fault[index] = (int)(*(unsigned char *)(&p->data[6]));
+                                        cur_io[index] = (int)(*(unsigned char *)(&p->data[7]));
                                         sum_pos[index] += cur_pos[index];
                                         sum_vel[index] += cur_vel[index];
                                         sum_ampr[index] += cur_ampr[index];
@@ -58,10 +57,10 @@ void t_rse(void)
                                                 period_ref = period_slow;
                                         }
                                         while (lstCount(&lst[index]) > len_lst) {
-                                                tmp = (CAN *)lstGet(&lst[index]);
-                                                sum_pos[index] -= (int)(*(s16 *)(&tmp->data[0])) * 20;
-                                                sum_vel[index] -= (int)(*(s16 *)(&tmp->data[2]));
-                                                sum_ampr[index] -= (int)(*(s16 *)(&tmp->data[4]));
+                                                tmp = (struct ext *)lstGet(&lst[index]);
+                                                sum_pos[index] -= (int)(*(short *)(&tmp->data[0])) * 20;
+                                                sum_vel[index] -= (int)(*(short *)(&tmp->data[2]));
+                                                sum_ampr[index] -= (int)(*(short *)(&tmp->data[4]));
                                                 free(tmp);
                                         }
                                         avg_pos[index] = sum_pos[index] / lstCount(&lst[index]);
@@ -77,7 +76,7 @@ void t_rse(void)
                                         ampr_max = max(cur_ampr[0], max(cur_ampr[1], max(cur_ampr[2], cur_ampr[3])));
                                         ampr_min = min(cur_ampr[0], min(cur_ampr[1], min(cur_ampr[2], cur_ampr[3])));
                                         if (lstCount(&lst[index]) == len_lst) {
-                                                delta = tickGet() - ((CAN *)lstFirst(&lst[index]))->ts;
+                                                delta = tickGet() - ((struct ext *)lstFirst(&lst[index]))->ts;
                                                 if (delta < (len_lst + 1) * period_ref) {
                                                         lock = taskLock();
                                                         flag.rse[index] &= ~FLAG_FAULT_COMM;
@@ -145,14 +144,14 @@ void t_rse(void)
                                                                 flag.rse[index] &= ~FLAG_FAULT_SYNC;
                                                 }
                                         }
-                                        tmp = (CAN *)lstLast(&lst[index]);
+                                        tmp = (struct ext *)lstLast(&lst[index]);
                                         ctr_fault[index] = 0;
                                         do {
                                                 if (cur_fault[index] == tmp->data[6])
                                                         ctr_fault[index]++;
                                                 else
                                                         ctr_fault[index] = 0;
-                                        } while (tmp = (CAN *)lstPrevious((NODE *)tmp));
+                                        } while (tmp = (struct ext *)lstPrevious((NODE *)tmp));
                                         if (ctr_fault[index] == len_lst) {
                                                 switch (cur_fault[index]) {
                                                 case 0x00:
@@ -170,14 +169,14 @@ void t_rse(void)
                                                         break;
                                                 }
                                         }
-                                        tmp = (CAN *)lstLast(&lst[index]);
+                                        tmp = (struct ext *)lstLast(&lst[index]);
                                         ctr_io[index] = 0;
                                         do {
                                                 if (cur_io[index] == tmp->data[7])
                                                         ctr_io[index]++;
                                                 else
                                                         ctr_io[index] = 0;
-                                        } while (tmp = (CAN *)lstPrevious((NODE *)tmp));
+                                        } while (tmp = (struct ext *)lstPrevious((NODE *)tmp));
                                         if (ctr_io[index] == len_lst)
                                                 flag.rse[index] = flag.rse[index] & ~FLAG_IO | cur_io[index];
                                 }
@@ -205,7 +204,7 @@ void t_rse(void)
         }
 }
 
-static int id2index(u8 id)
+static int id2index(unsigned char id)
 {
         static int index[255];
         index[CA_RSE0] = 1;
