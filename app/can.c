@@ -27,23 +27,21 @@ IMPORT unsigned char sysInumTbl[];
 #define PELI_RBSA   0x1E
 #define PELI_CDR    0x1F
 
-#define ADDR(x) (0xD1000 + 0x2000 * x)
-
-#define WRITE_BYTE(addr, data) \
-{                              \
-        *(unsigned char *)addr = data;    \
+#define WRITE_BYTE(addr, data)         \
+{                                      \
+        *(unsigned char *)addr = data; \
 }
 
-#define WRITE_REG_BYTE(addr, reg, data)    \
-{                                          \
+#define WRITE_REG_BYTE(addr, reg, data)                          \
+{                                                                \
         *(unsigned char *)addr = (unsigned char)reg;             \
         *(unsigned char *)(addr + 0x1000) = (unsigned char)data; \
 }
 
-#define READ_REG_BYTE(addr, reg) \
-({                               \
-        *(unsigned char *)addr = (unsigned char)reg;   \
-        *(unsigned char *)(addr + 0x1000);  \
+#define READ_REG_BYTE(addr, reg)                     \
+({                                                   \
+        *(unsigned char *)addr = (unsigned char)reg; \
+        *(unsigned char *)(addr + 0x1000);           \
 })
 
 extern int tid_can;
@@ -62,52 +60,43 @@ extern MSG_Q_ID msg_gen;
 extern struct data sys_data;
 extern struct ecu sys_ecu[256];
 
-static void isr_rx_can0(void);
-static void isr_rx_can1(void);
-static void init_can0(void);
-static void init_can1(void);
-static struct ext *p_can[2];
+static void isr_rx_can0(int addr);
+static void isr_rx_can1(int addr);
+static void init_can(int *addr, int *irq, unsigned int cable);
+static struct ext *p_can_rx[8];
 
-void t_can(int period, int duration)
+void t_can(int addr, int irq, int n, int period, int duration)
 {
+        int i, j;
+        unsigned char id[4];
+        unsigned delta;
+        struct ext buf[8][duration];
         struct {
                 int tid;
                 struct ext *p;
         } recv;
-        int i;
-        unsigned char id[4];
-        unsigned delta;
-        struct ext buf[2][duration];
-        LIST lst[2];
-        lstInit(&lst[0]);
-        lstInit(&lst[1]);
-        for (i = 0; i < duration; i++) {
-                lstAdd(&lst[0], (NODE *)&buf[0][i]);
-                lstAdd(&lst[1], (NODE *)&buf[1][i]);
+        LIST lst[8];
+        for (i = 0; i < n; i++) {
+                lstInit(&lst[i]);
+                for (j = 0; j < duration; j++)
+                        lstAdd(&lst[i], (NODE *)&buf[i][j]);
+                lstFirst(&lst[i])->previous = lstLast(&lst[i]);
+                lstLast(&lst[i])->next = lstFirst(&lst[i]);
+                p_can_rx[i] = (struct ext *)lstFirst(&lst[i]);
+                init_can((int *)addr, (int *)irq, i);
         }
-        lstFirst(&lst[0])->previous = lstLast(&lst[0]);
-        lstFirst(&lst[1])->previous = lstLast(&lst[1]);
-        lstLast(&lst[0])->next = lstFirst(&lst[0]);
-        lstLast(&lst[1])->next = lstFirst(&lst[1]);
-        p_can[0] = (struct ext *)lstFirst(&lst[0]);
-        p_can[1] = (struct ext *)lstFirst(&lst[1]);
-        init_can0();
-        init_can1();
         for (;;) {
                 taskDelay(period);
-                for (i = 0; i < 2; i++) {
+                for (i = 0; i < n; i++) {
                         if (READ_REG_BYTE(ADDR(i), PELI_SR) & 0x80) {
-                                if (!i)
-                                        init_can0();
-                                else
-                                        init_can1();
+                                init_can((int *)addr, (int *)irq, i);
                                 continue;
                         }
                         if (8 == msgQReceive(msg_can[i][0], (char *)&recv, 8, NO_WAIT) ||
                             8 == msgQReceive(msg_can[i][1], (char *)&recv, 8, NO_WAIT) ||
                             8 == msgQReceive(msg_can[i][2], (char *)&recv, 8, NO_WAIT)) {
                                 *(unsigned *)id = *(unsigned *)recv.p->id << 3;
-                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(0), struct ext_FF);
+                                WRITE_REG_BYTE(ADDR(i), PELI_TXB(0), CAN_FF);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(1), recv.p->id[3]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(2), recv.p->id[2]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(3), recv.p->id[1]);
@@ -122,18 +111,30 @@ void t_can(int period, int duration)
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(12), recv.p->data[7]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
                         }
-                        if (((struct ext *)lstPrevious((NODE *)p_can[i]))->ts && p_can[i]->ts) {
-                                delta = ((struct ext *)lstPrevious((NODE *)p_can[i]))->ts - p_can[i]->ts;
+                        if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts && p_can_rx[i]->ts) {
+                                delta = ((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts - p_can_rx[i]->ts;
                                 if (delta < duration - 10) {
-                                        if (!i)
+                                        switch (i) {
+                                        case 0:
                                                 sys_data.fault.bus0 = 1;
-                                        else
+                                                break;
+                                        case 1:
                                                 sys_data.fault.bus1 = 1;
+                                                break;
+                                        default:
+                                                break;
+                                        }
                                 } else if (delta > duration + 10) {
-                                        if (!i)
-                                                sys_data.fault.bus0 = 0;
-                                        else
-                                                sys_data.fault.bus1 = 0;
+                                        switch (i) {
+                                        case 0:
+                                                sys_data.fault.bus0 = 1;
+                                                break;
+                                        case 1:
+                                                sys_data.fault.bus1 = 1;
+                                                break;
+                                        default:
+                                                break;
+                                        }
                                 }
                         } else {
                                 if (!i)
@@ -145,122 +146,99 @@ void t_can(int period, int duration)
         }
 }
 
-static void isr_rx_can0(void)
+static void isr_rx_can0(int addr)
 {
         struct {
                 int tid;
                 struct ext *p;
         } send;
         send.tid = tid_can;
-        if (READ_REG_BYTE(ADDR(0), PELI_IR) != 0x01 ||
-            (READ_REG_BYTE(ADDR(0), PELI_SR) & 0x03) != 0x01 ||
-            READ_REG_BYTE(ADDR(0), PELI_RXB(0)) != struct ext_FF) {
-                WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
+        if (READ_REG_BYTE(addr, PELI_IR) != 0x01 ||
+            (READ_REG_BYTE(addr, PELI_SR) & 0x03) != 0x01 ||
+            READ_REG_BYTE(addr, PELI_RXB(0)) != CAN_FF) {
+                WRITE_REG_BYTE(addr, PELI_CMR, 0x04);
                 return;
         }
-        p_can[0]->id[3] = READ_REG_BYTE(ADDR(0), PELI_RXB(1));
-        p_can[0]->id[2] = READ_REG_BYTE(ADDR(0), PELI_RXB(2));
-        p_can[0]->id[1] = READ_REG_BYTE(ADDR(0), PELI_RXB(3));
-        p_can[0]->id[0] = READ_REG_BYTE(ADDR(0), PELI_RXB(4));
-        p_can[0]->data[0] = READ_REG_BYTE(ADDR(0), PELI_RXB(5));
-        p_can[0]->data[1] = READ_REG_BYTE(ADDR(0), PELI_RXB(6));
-        p_can[0]->data[2] = READ_REG_BYTE(ADDR(0), PELI_RXB(7));
-        p_can[0]->data[3] = READ_REG_BYTE(ADDR(0), PELI_RXB(8));
-        p_can[0]->data[4] = READ_REG_BYTE(ADDR(0), PELI_RXB(9));
-        p_can[0]->data[5] = READ_REG_BYTE(ADDR(0), PELI_RXB(10));
-        p_can[0]->data[6] = READ_REG_BYTE(ADDR(0), PELI_RXB(11));
-        p_can[0]->data[7] = READ_REG_BYTE(ADDR(0), PELI_RXB(12));
-        *(unsigned *)p_can[0]->id >>= 3;
-        if (p_can[0]->id[1] == CA_MAIN && sys_ecu[p_can[0]->id[0]].msg) {
-                p_can[0]->ts = tickGet();
-                send.p = p_can[0];
-                msgQSend(sys_ecu[p_can[0]->id[0]].msg, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                p_can[0] = (struct ext *)lstNext((NODE *)p_can[0]);
+        p_can_rx[0]->id[3] = READ_REG_BYTE(addr, PELI_RXB(1));
+        p_can_rx[0]->id[2] = READ_REG_BYTE(addr, PELI_RXB(2));
+        p_can_rx[0]->id[1] = READ_REG_BYTE(addr, PELI_RXB(3));
+        p_can_rx[0]->id[0] = READ_REG_BYTE(addr, PELI_RXB(4));
+        p_can_rx[0]->data[0] = READ_REG_BYTE(addr, PELI_RXB(5));
+        p_can_rx[0]->data[1] = READ_REG_BYTE(addr, PELI_RXB(6));
+        p_can_rx[0]->data[2] = READ_REG_BYTE(addr, PELI_RXB(7));
+        p_can_rx[0]->data[3] = READ_REG_BYTE(addr, PELI_RXB(8));
+        p_can_rx[0]->data[4] = READ_REG_BYTE(addr, PELI_RXB(9));
+        p_can_rx[0]->data[5] = READ_REG_BYTE(addr, PELI_RXB(10));
+        p_can_rx[0]->data[6] = READ_REG_BYTE(addr, PELI_RXB(11));
+        p_can_rx[0]->data[7] = READ_REG_BYTE(addr, PELI_RXB(12));
+        *(unsigned *)p_can_rx[0]->id >>= 3;
+        if (p_can_rx[0]->id[1] == CA_MAIN && sys_ecu[p_can_rx[0]->id[0]].msg) {
+                p_can_rx[0]->ts = tickGet();
+                send.p = p_can_rx[0];
+                msgQSend(sys_ecu[p_can_rx[0]->id[0]].msg, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                p_can_rx[0] = (struct ext *)lstNext((NODE *)p_can_rx[0]);
         }
-        WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x04);
+        WRITE_REG_BYTE(addr, PELI_CMR, 0x04);
 }
 
-static void isr_rx_can1(void)
+static void isr_rx_can1(int addr)
 {
         struct {
                 int tid;
                 struct ext *p;
         } send;
         send.tid = tid_can;
-        if (READ_REG_BYTE(ADDR(1), PELI_IR) != 0x01 ||
-            (READ_REG_BYTE(ADDR(1), PELI_SR) & 0x03) != 0x01 ||
-            READ_REG_BYTE(ADDR(1), PELI_RXB(0)) != struct ext_FF) {
-                WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);
+        if (READ_REG_BYTE(addr, PELI_IR) != 0x01 ||
+            (READ_REG_BYTE(addr, PELI_SR) & 0x03) != 0x01 ||
+            READ_REG_BYTE(addr, PELI_RXB(0)) != CAN_FF) {
+                WRITE_REG_BYTE(addr, PELI_CMR, 0x04);
                 return;
         }
-        p_can[1]->id[3] = READ_REG_BYTE(ADDR(1), PELI_RXB(1));
-        p_can[1]->id[2] = READ_REG_BYTE(ADDR(1), PELI_RXB(2));
-        p_can[1]->id[1] = READ_REG_BYTE(ADDR(1), PELI_RXB(3));
-        p_can[1]->id[0] = READ_REG_BYTE(ADDR(1), PELI_RXB(4));
-        p_can[1]->data[0] = READ_REG_BYTE(ADDR(1), PELI_RXB(5));
-        p_can[1]->data[1] = READ_REG_BYTE(ADDR(1), PELI_RXB(6));
-        p_can[1]->data[2] = READ_REG_BYTE(ADDR(1), PELI_RXB(7));
-        p_can[1]->data[3] = READ_REG_BYTE(ADDR(1), PELI_RXB(8));
-        p_can[1]->data[4] = READ_REG_BYTE(ADDR(1), PELI_RXB(9));
-        p_can[1]->data[5] = READ_REG_BYTE(ADDR(1), PELI_RXB(10));
-        p_can[1]->data[6] = READ_REG_BYTE(ADDR(1), PELI_RXB(11));
-        p_can[1]->data[7] = READ_REG_BYTE(ADDR(1), PELI_RXB(12));
-        *(unsigned *)p_can[1]->id >>= 3;
-        if (p_can[1]->id[1] == CA_MAIN && sys_ecu[p_can[1]->id[0]].msg) {
-                p_can[1]->ts = tickGet();
-                send.p = p_can[1];
-                msgQSend(sys_ecu[p_can[1]->id[0]].msg, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                p_can[1] = (struct ext *)lstNext((NODE *)p_can[1]);
+        p_can_rx[1]->id[3] = READ_REG_BYTE(addr, PELI_RXB(1));
+        p_can_rx[1]->id[2] = READ_REG_BYTE(addr, PELI_RXB(2));
+        p_can_rx[1]->id[1] = READ_REG_BYTE(addr, PELI_RXB(3));
+        p_can_rx[1]->id[0] = READ_REG_BYTE(addr, PELI_RXB(4));
+        p_can_rx[1]->data[0] = READ_REG_BYTE(addr, PELI_RXB(5));
+        p_can_rx[1]->data[1] = READ_REG_BYTE(addr, PELI_RXB(6));
+        p_can_rx[1]->data[2] = READ_REG_BYTE(addr, PELI_RXB(7));
+        p_can_rx[1]->data[3] = READ_REG_BYTE(addr, PELI_RXB(8));
+        p_can_rx[1]->data[4] = READ_REG_BYTE(addr, PELI_RXB(9));
+        p_can_rx[1]->data[5] = READ_REG_BYTE(addr, PELI_RXB(10));
+        p_can_rx[1]->data[6] = READ_REG_BYTE(addr, PELI_RXB(11));
+        p_can_rx[1]->data[7] = READ_REG_BYTE(addr, PELI_RXB(12));
+        *(unsigned *)p_can_rx[1]->id >>= 3;
+        if (p_can_rx[1]->id[1] == CA_MAIN && sys_ecu[p_can_rx[1]->id[0]].msg) {
+                p_can_rx[1]->ts = tickGet();
+                send.p = p_can_rx[1];
+                msgQSend(sys_ecu[p_can_rx[1]->id[0]].msg, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                p_can_rx[1] = (struct ext *)lstNext((NODE *)p_can_rx[1]);
         }
-        WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x04);
+        WRITE_REG_BYTE(addr, PELI_CMR, 0x04);
 }
 
-static void init_can0(void)
+static void init_can(int *addr, int *irq, unsigned int cable)
 {
-        sysIntDisablePIC(5);
-        WRITE_REG_BYTE(ADDR(0), PELI_MODE, 0x09);
-        WRITE_REG_BYTE(ADDR(0), PELI_CMR, 0x0C);
-        WRITE_REG_BYTE(ADDR(0), PELI_CDR, 0x88);
-        WRITE_REG_BYTE(ADDR(0), PELI_IER, 0x09);
-        WRITE_REG_BYTE(ADDR(0), PELI_ACR(0), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_ACR(1), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_ACR(2), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_ACR(3), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_AMR(0), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_AMR(1), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_AMR(2), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_AMR(3), 0xFF);
-        WRITE_REG_BYTE(ADDR(0), PELI_BTR(0), 0x04);
-        WRITE_REG_BYTE(ADDR(0), PELI_BTR(1), 0x1C);
-        WRITE_REG_BYTE(ADDR(0), PELI_EWLR, 0x60);
-        WRITE_REG_BYTE(ADDR(0), PELI_OCR, 0x1A);
-        WRITE_REG_BYTE(ADDR(0), PELI_MODE, 0x08);
-        intConnect(INUM_TO_IVEC(sysInumTbl[5]), (VOIDFUNCPTR)isr_rx_can0, 0);
-        sysIntEnablePIC(5);
-}
-
-static void init_can1(void)
-{
-        sysIntDisablePIC(7);
-        WRITE_REG_BYTE(ADDR(1), PELI_MODE, 0x09);
-        WRITE_REG_BYTE(ADDR(1), PELI_CMR, 0x0C);
-        WRITE_REG_BYTE(ADDR(1), PELI_CDR, 0x88);
-        WRITE_REG_BYTE(ADDR(1), PELI_IER, 0x09);
-        WRITE_REG_BYTE(ADDR(1), PELI_ACR(0), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_ACR(1), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_ACR(2), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_ACR(3), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_AMR(0), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_AMR(1), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_AMR(2), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_AMR(3), 0xFF);
-        WRITE_REG_BYTE(ADDR(1), PELI_BTR(0), 0x04);
-        WRITE_REG_BYTE(ADDR(1), PELI_BTR(1), 0x1C);
-        WRITE_REG_BYTE(ADDR(1), PELI_EWLR, 0x60);
-        WRITE_REG_BYTE(ADDR(1), PELI_OCR, 0x1A);
-        WRITE_REG_BYTE(ADDR(1), PELI_MODE, 0x08);
-        intConnect(INUM_TO_IVEC(sysInumTbl[7]), (VOIDFUNCPTR)isr_rx_can1, 0);
-        sysIntEnablePIC(7);
+        void (*isr[8])(int) = {isr_rx_can0, isr_rx_can1};
+        sysIntDisablePIC(irq[cable]);
+        WRITE_REG_BYTE(addr[cable], PELI_MODE, 0x09);
+        WRITE_REG_BYTE(addr[cable], PELI_CMR, 0x0C);
+        WRITE_REG_BYTE(addr[cable], PELI_CDR, 0x88);
+        WRITE_REG_BYTE(addr[cable], PELI_IER, 0x09);
+        WRITE_REG_BYTE(addr[cable], PELI_ACR(0), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_ACR(1), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_ACR(2), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_ACR(3), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_AMR(0), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_AMR(1), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_AMR(2), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_AMR(3), 0xFF);
+        WRITE_REG_BYTE(addr[cable], PELI_BTR(0), 0x04);
+        WRITE_REG_BYTE(addr[cable], PELI_BTR(1), 0x1C);
+        WRITE_REG_BYTE(addr[cable], PELI_EWLR, 0x60);
+        WRITE_REG_BYTE(addr[cable], PELI_OCR, 0x1A);
+        WRITE_REG_BYTE(addr[cable], PELI_MODE, 0x08);
+        intConnect(INUM_TO_IVEC(sysInumTbl[irq[cable]]), (VOIDFUNCPTR)isr[cable], addr[cable]);
+        sysIntEnablePIC(irq[cable]);
 }
 
 /*
