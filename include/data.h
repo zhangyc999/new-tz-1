@@ -111,7 +111,8 @@ struct data {
                         unsigned char sync: 2;
                         unsigned char pmin: 2;
                         unsigned char pmax: 2;
-                        unsigned char vel: 2;
+                        unsigned char vmin: 2;
+                        unsigned char vmax: 2;
                         unsigned char amin: 2;
                         unsigned char amax: 2;
                         unsigned char dp: 2;
@@ -121,7 +122,6 @@ struct data {
                         unsigned char smax: 2;
                         unsigned char brake: 2;
                         unsigned char limit: 2;
-                        unsigned char : 2;
                         unsigned char dev: 2;
                 } fault;
                 struct {
