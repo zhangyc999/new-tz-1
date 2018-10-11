@@ -64,7 +64,7 @@ void tz(void)
         int portclient = 4201;
         char *addrserver = "192.168.100.130";
         char *addrgroup = "234.1.1.9";
-        unsigned can[8] = {0xD1000, 0xD3000, 0xD5000, 0xD7000};
+        int can[8] = {0xD1000, 0xD3000, 0xD5000, 0xD7000};
         int irq[8] = {5, 7, 11, 12};
         unsigned char tls[16] = {CA_TLS0, CA_TLS1};
         unsigned char vsl[16] = {CA_VSL0, CA_VSL1};
@@ -111,16 +111,11 @@ void tz(void)
         lstLibInit();
         ecu_init();
         sysClkRateSet(100);
-        tid_core = taskSpawn("CORE", 99, VX_FP_TASK, 20000, (FUNCPTR)t_core,
-                             5, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        tid_udpr = taskSpawn("UDPR", 90, VX_FP_TASK, 200000, (FUNCPTR)t_udpr,
-                             sfd, 10, 100, 0, 0, 0, 0, 0, 0, 0);
-        tid_udpt = taskSpawn("UDPT", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpt,
-                             sfd, portclient, (int)addrgroup, 10, 0, 0, 0, 0, 0, 0);
-        tid_can = taskSpawn("struct ext", 40, VX_FP_TASK, 200000, (FUNCPTR)t_can,
-                            (int)can, (int)irq, 1, 1000, 0, 0, 0, 0, 0, 0);
-        tid_tls = taskSpawn("TLS", 40, VX_FP_TASK, 20000, (FUNCPTR)t_tls,
-                            (int)tls, 2, 50, 10, 0, 0, 0, 0, 0, 0);
+        tid_core = taskSpawn("CORE", 99, VX_FP_TASK, 20000, (FUNCPTR)t_core, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        tid_udpr = taskSpawn("UDPR", 90, VX_FP_TASK, 200000, (FUNCPTR)t_udpr, sfd, 10, 100, 0, 0, 0, 0, 0, 0, 0);
+        tid_udpt = taskSpawn("UDPT", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpt, sfd, portclient, (int)addrgroup, 10, 0, 0, 0, 0, 0, 0);
+        tid_can = taskSpawn("struct ext", 40, VX_FP_TASK, 200000, (FUNCPTR)t_can, (int)can, (int)irq, 2, 1, 1000, 0, 0, 0, 0, 0);
+        tid_tls = taskSpawn("TLS", 40, VX_FP_TASK, 20000, (FUNCPTR)t_tls, (int)tls, 2, 50, 10, 0, 0, 0, 0, 0, 0);
 }
 
 static void ecu_init(void)
