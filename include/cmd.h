@@ -11,9 +11,9 @@
 
 struct cmd {
         NODE node;
-        unsigned short head; /* 固定帧头：0xECEC */
+        unsigned short head; /* 固定帧头：0xecec */
         unsigned short len; /* 从head开始到chk结束共计字节总数 */
-        unsigned char src; /* 数据源：0xEC */
+        unsigned char src; /* 数据源：0xec */
         unsigned char dev; /* 操作对象 */
         unsigned char mode; /* 模式 */
         unsigned char act; /* 动作 */

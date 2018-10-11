@@ -2,7 +2,7 @@
 #define DATA_H_
 
 struct data {
-        unsigned short head; /* 固定帧头：0xCCCC */
+        unsigned short head; /* 固定帧头：0xcccc */
         unsigned short len; /* 从head开始到chk结束共计字节总数 */
         struct {
                 struct {
