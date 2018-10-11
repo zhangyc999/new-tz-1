@@ -1,15 +1,11 @@
 #include "cmd.h"
 #include "data.h"
-#include "type.h"
 #include "vx.h"
 
-extern int sfd_udp;
-extern int port_client;
-extern str addr_group;
 extern MSG_Q_ID msg_core;
 extern DATA sys_data;
 
-void t_udpr(int period, int duration)
+void t_udpr(int sfd, int period, int duration)
 {
         struct {
                 int tid;
@@ -31,32 +27,32 @@ void t_udpr(int period, int duration)
         send.tid = taskIdSelf();
         for (;;) {
                 taskDelay(period);
-                if (len != recvfrom(sfd_udp, (str)&p->head, len, MSG_PEEK, (struct sockaddr *)&server, &n))
+                if (len != recvfrom(sfd, (char *)&p->head, len, MSG_PEEK, (struct sockaddr *)&server, &n))
                         continue;
-                while (len == recvfrom(sfd_udp, (str)&p->head, len, 0, (struct sockaddr *)&server, &n))
+                while (len == recvfrom(sfd, (char *)&p->head, len, 0, (struct sockaddr *)&server, &n))
                         ;
                 if (p->head == 0xeeee && p->len == len) {
                         p->ts = tickGet();
                         send.p = p;
-                        msgQSend(msg_core, (str)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                        msgQSend(msg_core, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                         p = (CMD *)lstNext((NODE *)p);
                 }
         }
 }
 
-void t_udpt(int period)
+void t_udpt(int sfd, int portclient, int addrgroup, int period)
 {
         int n = sizeof(struct sockaddr_in);
         struct sockaddr_in client;
         client.sin_len = (u_char)n;
         client.sin_family = AF_INET;
-        client.sin_port = htons(port_client);
-        client.sin_addr.s_addr = inet_addr(addr_group);
+        client.sin_port = htons(portclient);
+        client.sin_addr.s_addr = inet_addr((char *)addrgroup);
         sys_data.head = 0xcccc;
         sys_data.len = sizeof(DATA);
         for (;;) {
                 taskDelay(period);
                 sys_data.ts = tickGet();
-                sendto(sfd_udp, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, n);
+                sendto(sfd, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, n);
         }
 }

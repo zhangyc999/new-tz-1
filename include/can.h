@@ -1,32 +1,30 @@
 #ifndef CAN_H_
 #define CAN_H_
 
-#include "type.h"
 #include "vx.h"
 
-struct ext_can {
+#define SFF 0
+#define EFF 1
+#define RTR 0
+#define DLC 8
+
+#define CAN_FF (EFF << 7 | RTR << 6 | DLC)
+
+struct ext {
         NODE node;
-        u8 id[4];
-        u8 data[8];
-        u32 ts;
+        unsigned char id[4];
+        unsigned char data[8];
+        unsigned ts;
 };
 
-typedef struct ext_can CAN;
-
-typedef struct {
+struct can {
         NODE node;
-        CAN *can;
-} PCAN;
+        struct ext *can;
+};
 
-#define CAN_SFF 0
-#define CAN_EFF 1
-#define CAN_RTR 0
-#define CAN_DLC 8
-#define CAN_FF  (CAN_EFF << 7 | CAN_RTR << 6 | CAN_DLC)
-
-typedef struct {
-        u8 index;
+struct ecu {
+        unsigned char index;
         MSG_Q_ID msg;
-} ECU;
+};
 
 #endif /* CAN_H_ */
