@@ -92,8 +92,7 @@ struct data {
                         unsigned char shdb: 1; /* 后端帘 */
                         unsigned char shdf: 1; /* 前端帘 */
                         unsigned char : 5;
-                        unsigned char shdst: 1;
-                        char shdst: 1; /* 侧帘/纵展 */
+                        unsigned char shdst: 1; /* 侧帘/纵展 */
                         unsigned char leg0: 1; /* 左前支腿 */
                         unsigned char leg3: 1; /* 右前支腿 */
                         unsigned char leg1: 1; /* 左后支腿 */
