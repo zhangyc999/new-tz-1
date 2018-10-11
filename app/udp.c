@@ -3,16 +3,16 @@
 #include "vx.h"
 
 extern MSG_Q_ID msg_core;
-extern DATA sys_data;
+extern struct data sys_data;
 
 void t_udpr(int sfd, int period, int duration)
 {
         struct {
                 int tid;
-                CMD *p;
+                struct cmd *p;
         } send;
-        int n = sizeof(struct sockaddr_in);
-        int len = sizeof(CMD) - sizeof(NODE);
+        int size = sizeof(struct sockaddr_in);
+        int len = sizeof(struct cmd) - sizeof(NODE);
         int i;
         struct sockaddr_in server;
         CMD buf[duration];
@@ -27,9 +27,9 @@ void t_udpr(int sfd, int period, int duration)
         send.tid = taskIdSelf();
         for (;;) {
                 taskDelay(period);
-                if (len != recvfrom(sfd, (char *)&p->head, len, MSG_PEEK, (struct sockaddr *)&server, &n))
+                if (len != recvfrom(sfd, (char *)&p->head, len, MSG_PEEK, (struct sockaddr *)&server, &size))
                         continue;
-                while (len == recvfrom(sfd, (char *)&p->head, len, 0, (struct sockaddr *)&server, &n))
+                while (len == recvfrom(sfd, (char *)&p->head, len, 0, (struct sockaddr *)&server, &size))
                         ;
                 if (p->head == 0xeeee && p->len == len) {
                         p->ts = tickGet();
@@ -42,7 +42,7 @@ void t_udpr(int sfd, int period, int duration)
 
 void t_udpt(int sfd, int portclient, int addrgroup, int period)
 {
-        int n = sizeof(struct sockaddr_in);
+        int size = sizeof(struct sockaddr_in);
         struct sockaddr_in client;
         client.sin_len = (u_char)n;
         client.sin_family = AF_INET;
@@ -53,6 +53,6 @@ void t_udpt(int sfd, int portclient, int addrgroup, int period)
         for (;;) {
                 taskDelay(period);
                 sys_data.ts = tickGet();
-                sendto(sfd, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, n);
+                sendto(sfd, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, size);
         }
 }

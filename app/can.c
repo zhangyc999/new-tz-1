@@ -62,7 +62,7 @@ extern struct ecu sys_ecu[256];
 
 static void isr_rx_can0(int addr);
 static void isr_rx_can1(int addr);
-static void init_can(int *addr, int *irq, unsigned int cable);
+static void init_can(int *addr, int *irq, int cable);
 static struct ext *p_can_rx[8];
 
 void t_can(int addr, int irq, int n, int period, int duration)
@@ -127,20 +127,26 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                 } else if (delta > duration + 10) {
                                         switch (i) {
                                         case 0:
-                                                sys_data.fault.bus0 = 1;
+                                                sys_data.fault.bus0 = 0;
                                                 break;
                                         case 1:
-                                                sys_data.fault.bus1 = 1;
+                                                sys_data.fault.bus1 = 0;
                                                 break;
                                         default:
                                                 break;
                                         }
                                 }
                         } else {
-                                if (!i)
+                                switch (i) {
+                                case 0:
                                         sys_data.fault.bus0 = 0;
-                                else
+                                        break;
+                                case 1:
                                         sys_data.fault.bus1 = 0;
+                                        break;
+                                default:
+                                        break;
+                                }
                         }
                 }
         }
@@ -216,7 +222,7 @@ static void isr_rx_can1(int addr)
         WRITE_REG_BYTE(addr, PELI_CMR, 0x04);
 }
 
-static void init_can(int *addr, int *irq, unsigned int cable)
+static void init_can(int *addr, int *irq, int cable)
 {
         void (*isr[8])(int) = {isr_rx_can0, isr_rx_can1};
         sysIntDisablePIC(irq[cable]);
@@ -261,13 +267,4 @@ static void init_can(int *addr, int *irq, unsigned int cable)
   | 800Kbps | 0x00 | 0x16 |
   | 1Mbps   | 0x00 | 0x14 |
   +---------+------+------+
-
-  +------------+
-  | struct ext  | IRQ |
-  +------+-----+
-  | struct ext0 | 5   |
-  | struct ext1 | 7   |
-  | struct ext2 | 11  |
-  | struct ext3 | 12  |
-  +------+-----+
 */
