@@ -15,15 +15,15 @@ void t_udpr(int sfd, int period, int duration)
         int len = sizeof(struct cmd) - sizeof(NODE);
         int i;
         struct sockaddr_in server;
-        CMD buf[duration];
-        CMD *p;
+        struct cmd buf[duration];
+        struct cmd *p;
         LIST lst;
         lstInit(&lst);
         for (i = 0; i < duration; i++)
                 lstAdd(&lst, (NODE *)&buf[i]);
         lstFirst(&lst)->previous = lstLast(&lst);
         lstLast(&lst)->next = lstFirst(&lst);
-        p = (CMD *)lstFirst(&lst);
+        p = (struct cmd *)lstFirst(&lst);
         send.tid = taskIdSelf();
         for (;;) {
                 taskDelay(period);
@@ -35,7 +35,7 @@ void t_udpr(int sfd, int period, int duration)
                         p->ts = tickGet();
                         send.p = p;
                         msgQSend(msg_core, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        p = (CMD *)lstNext((NODE *)p);
+                        p = (struct cmd *)lstNext((NODE *)p);
                 }
         }
 }
@@ -44,15 +44,15 @@ void t_udpt(int sfd, int portclient, int addrgroup, int period)
 {
         int size = sizeof(struct sockaddr_in);
         struct sockaddr_in client;
-        client.sin_len = (u_char)n;
+        client.sin_len = (u_char)size;
         client.sin_family = AF_INET;
         client.sin_port = htons(portclient);
         client.sin_addr.s_addr = inet_addr((char *)addrgroup);
         sys_data.head = 0xcccc;
-        sys_data.len = sizeof(DATA);
+        sys_data.len = sizeof(struct data);
         for (;;) {
                 taskDelay(period);
                 sys_data.ts = tickGet();
-                sendto(sfd, (caddr_t)&sys_data, sizeof(DATA), 0, (struct sockaddr *)&client, size);
+                sendto(sfd, (caddr_t)&sys_data, sizeof(struct data), 0, (struct sockaddr *)&client, size);
         }
 }
