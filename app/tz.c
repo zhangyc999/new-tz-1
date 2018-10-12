@@ -56,7 +56,7 @@ static void ecu_init(void); /* 初始化各CAN节点索引及消息队列 */
 void tz(void)
 {
         int sfd = socket(AF_INET, SOCK_DGRAM, 0); /* 创建套接字 */
-        int n = sizeof(struct sockaddr_in); /* sockaddr_in结构体长度 */
+        int size = sizeof(struct sockaddr_in); /* sockaddr_in结构体长度 */
         struct sockaddr_in server; /* 服务器 */
         struct ip_mreq group; /* 组播 */
         /* u_long mode = 1; */
@@ -80,7 +80,7 @@ void tz(void)
                 CA_SHDS0, CA_SHDS1, CA_SHDS2, CA_SHDS3
         }; /* 防护棚CAN地址表 */
         unsigned char mom[16] = {CA_MOM0, CA_MOM1, CA_MOM2, CA_MOM3}; /* 恒力矩CAN地址表 */
-        server.sin_len = (u_char)n;
+        server.sin_len = (u_char)size;
         server.sin_family = AF_INET;
         server.sin_port = htons(portserver);
         server.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -88,7 +88,7 @@ void tz(void)
         group.imr_multiaddr.s_addr = inet_addr(addrgroup);
         routeAdd(addrgroup, addrserver);
         /* ioctl(sfd, FIONBIO, (int)&mode); */
-        bind(sfd, (struct sockaddr *)&server, n);
+        bind(sfd, (struct sockaddr *)&server, size);
         setsockopt(sfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group));
         msg_core = msgQCreate(128, 8, MSG_Q_FIFO);
         msg_can[0][0] = msgQCreate(128, 8, MSG_Q_FIFO);

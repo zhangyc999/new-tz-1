@@ -77,14 +77,14 @@ void t_can(int addr, int irq, int n, int period, int duration)
         } recv;
         LIST lst[8]; /* 定义链表头 */
         for (i = 0; i < n; i++) {
-           /* 开始：构建接收缓冲链表 */
+                /* 开始：构建接收缓冲链表 */
                 lstInit(&lst[i]);
                 for (j = 0; j < duration; j++)
-                  lstAdd(&lst[i], (NODE *)&buf[i][j]);
+                        lstAdd(&lst[i], (NODE *)&buf[i][j]);
                 lstFirst(&lst[i])->previous = lstLast(&lst[i]);
                 lstLast(&lst[i])->next = lstFirst(&lst[i]);
                 p_can_rx[i] = (struct ext *)lstFirst(&lst[i]);
-                 /* 结束：构建接收缓冲链表 */
+                /* 结束：构建接收缓冲链表 */
                 init_can((int *)addr, (int *)irq, i); /* 硬件初始化 */
         }
         for (;;) {
@@ -98,7 +98,7 @@ void t_can(int addr, int irq, int n, int period, int duration)
                             8 == msgQReceive(msg_can[i][1], (char *)&recv, 8, NO_WAIT) ||
                             8 == msgQReceive(msg_can[i][2], (char *)&recv, 8, NO_WAIT)) { /* 消息队列非空 */
                                 *(unsigned *)id = *(unsigned *)recv.p->id << 3; /* 29位ID左对齐 */
-                                 /* 开始：向总线发送数据 */
+                                /* 开始：向总线发送数据 */
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(0), CAN_FF);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(1), recv.p->id[3]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(2), recv.p->id[2]);
@@ -113,7 +113,7 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(11), recv.p->data[6]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_TXB(12), recv.p->data[7]);
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
-                                 /* 结束：向总线发送数据 */
+                                /* 结束：向总线发送数据 */
                         }
                         if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts && p_can_rx[i]->ts) { /* 缓冲链表已满 */
                                 delta = ((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts - p_can_rx[i]->ts;
@@ -141,16 +141,16 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                         }
                                 }
                         } else {
-                                        switch (i) {
-                                        case 0:
-                                                sys_data.fault.bus0 = 0; /* 总线0负载率正常 */
-                                                break;
-                                        case 1:
-                                                sys_data.fault.bus1 = 0; /* 总线1负载率正常 */
-                                                break;
-                                        default:
-                                                break;
-                                        }
+                                switch (i) {
+                                case 0:
+                                        sys_data.fault.bus0 = 0; /* 总线0负载率正常 */
+                                        break;
+                                case 1:
+                                        sys_data.fault.bus1 = 0; /* 总线1负载率正常 */
+                                        break;
+                                default:
+                                        break;
+                                }
                         }
                 }
         }
@@ -169,7 +169,7 @@ static void isr_rx_can0(int addr)
                 WRITE_REG_BYTE(addr, PELI_CMR, 0x04); /* 释放接收缓冲器 */
                 return;
         }
-         /* 开始：接收数据并拷贝到缓冲链表中 */
+        /* 开始：接收数据并拷贝到缓冲链表中 */
         p_can_rx[0]->id[3] = READ_REG_BYTE(addr, PELI_RXB(1));
         p_can_rx[0]->id[2] = READ_REG_BYTE(addr, PELI_RXB(2));
         p_can_rx[0]->id[1] = READ_REG_BYTE(addr, PELI_RXB(3));
@@ -182,7 +182,7 @@ static void isr_rx_can0(int addr)
         p_can_rx[0]->data[5] = READ_REG_BYTE(addr, PELI_RXB(10));
         p_can_rx[0]->data[6] = READ_REG_BYTE(addr, PELI_RXB(11));
         p_can_rx[0]->data[7] = READ_REG_BYTE(addr, PELI_RXB(12));
-         /* 结束：接收数据并拷贝到缓冲链表中 */
+        /* 结束：接收数据并拷贝到缓冲链表中 */
         *(unsigned *)p_can_rx[0]->id >>= 3; /* 29位ID左对齐 */
         if (p_can_rx[0]->id[1] == CA_MAIN && sys_ecu[p_can_rx[0]->id[0]].msg) { /* 收到的ID和数据正确 */
                 p_can_rx[0]->ts = tickGet(); /* 打上时标 */
@@ -232,7 +232,7 @@ static void init_can(int *addr, int *irq, int cable)
 {
         void (*isr[8])(int) = {isr_rx_can0, isr_rx_can1}; /* CAN总线接收中断服务程序函数指针 */
         sysIntDisablePIC(irq[cable]); /* 关中断 */
-         /* 开始：硬件初始化 */
+        /* 开始：硬件初始化 */
         WRITE_REG_BYTE(addr[cable], PELI_MODE, 0x09);
         WRITE_REG_BYTE(addr[cable], PELI_CMR, 0x0C);
         WRITE_REG_BYTE(addr[cable], PELI_CDR, 0x88);
@@ -250,7 +250,7 @@ static void init_can(int *addr, int *irq, int cable)
         WRITE_REG_BYTE(addr[cable], PELI_EWLR, 0x60);
         WRITE_REG_BYTE(addr[cable], PELI_OCR, 0x1A);
         WRITE_REG_BYTE(addr[cable], PELI_MODE, 0x08);
-         /* 结束：硬件初始化 */
+        /* 结束：硬件初始化 */
         intConnect(INUM_TO_IVEC(sysInumTbl[irq[cable]]), (VOIDFUNCPTR)isr[cable], addr[cable]); /* 绑定中断 */
         sysIntEnablePIC(irq[cable]); /* 开中断 */
 }
