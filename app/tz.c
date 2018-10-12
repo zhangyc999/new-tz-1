@@ -20,66 +20,66 @@ extern void t_shd(int ca, int n, int period, int duration);
 extern void t_mom(int ca, int n, int period, int duration);
 extern void t_dbg(int period);
 
-int tid_core;
-int tid_udpr;
-int tid_udpt;
-int tid_can;
-int tid_tls;
-int tid_vsl;
-int tid_psu;
-int tid_swh;
-int tid_rse;
-int tid_swv;
-int tid_prp;
-int tid_xyz;
-int tid_shd;
-int tid_mom;
-int tid_dbg;
-MSG_Q_ID msg_core;
-MSG_Q_ID msg_can[8][3];
-MSG_Q_ID msg_tls;
-MSG_Q_ID msg_vsl;
-MSG_Q_ID msg_psu;
-MSG_Q_ID msg_swh;
-MSG_Q_ID msg_rse;
-MSG_Q_ID msg_swv;
-MSG_Q_ID msg_prp;
-MSG_Q_ID msg_xyz;
-MSG_Q_ID msg_shd;
-MSG_Q_ID msg_mom;
-MSG_Q_ID msg_gen;
-struct data sys_data;
-struct ecu sys_ecu[256];
+int tid_core; /* 主任务ID */
+int tid_udpr; /* UDP接收任务ID */
+int tid_udpt; /* UDP发送任务ID */
+int tid_can; /* CAN通信任务ID */
+int tid_tls; /* 倾角传感器任务ID */
+int tid_vsl; /* 视觉定位任务ID */
+int tid_psu; /* 供电单元任务ID */
+int tid_swh; /* 横展任务ID */
+int tid_rse; /* 顶升任务ID */
+int tid_swv; /* 俯仰任务ID */
+int tid_prp; /* 垂直任务ID */
+int tid_xyz; /* 三轴转载机构任务ID */
+int tid_shd; /* 防护棚任务ID */
+int tid_mom; /* 恒力矩任务ID */
+int tid_dbg; /* 调试任务ID */
+MSG_Q_ID msg_core; /* 主任务消息队列ID */
+MSG_Q_ID msg_can[8][3]; /* CAN通信发送消息队列ID */
+MSG_Q_ID msg_tls; /* 倾角传感器消息队列ID */
+MSG_Q_ID msg_vsl; /* 视觉定位消息队列ID */
+MSG_Q_ID msg_psu; /* 供电单元消息队列ID */
+MSG_Q_ID msg_swh; /* 横展消息队列ID */
+MSG_Q_ID msg_rse; /* 顶升消息队列ID */
+MSG_Q_ID msg_swv; /* 俯仰消息队列ID */
+MSG_Q_ID msg_prp; /* 垂直消息队列ID */
+MSG_Q_ID msg_xyz; /* 三轴转载机构消息队列ID */
+MSG_Q_ID msg_shd; /* 防护棚消息队列ID */
+MSG_Q_ID msg_mom; /* 恒力矩消息队列ID */
+MSG_Q_ID msg_gen; /* 发电机消息队列ID */
+struct data sys_data; /* 系统当前状态信息 */
+struct ecu sys_ecu[256]; /* 各CAN节点索引及消息队列（CAN通信任务->相应子任务）*/
 
-static void ecu_init(void);
+static void ecu_init(void); /* 初始化各CAN节点索引及消息队列 */
 
 void tz(void)
 {
-        int sfd = socket(AF_INET, SOCK_DGRAM, 0);
-        int size = sizeof(struct sockaddr_in);
-        struct sockaddr_in server;
-        struct ip_mreq group;
+        int sfd = socket(AF_INET, SOCK_DGRAM, 0); /* 创建套接字 */
+        int size = sizeof(struct sockaddr_in); /* sockaddr_in结构体长度 */
+        struct sockaddr_in server; /* 服务器 */
+        struct ip_mreq group; /* 组播 */
         /* u_long mode = 1; */
-        int portserver = 4207;
-        int portclient = 4201;
-        char *addrserver = "192.168.100.130";
-        char *addrgroup = "234.1.1.9";
-        int can[8] = {0xD1000, 0xD3000, 0xD5000, 0xD7000};
-        int irq[8] = {5, 7, 11, 12};
-        unsigned char tls[16] = {CA_TLS0, CA_TLS1};
-        unsigned char vsl[16] = {CA_VSL0, CA_VSL1};
-        unsigned char psu[16] = {CA_PSU};
-        unsigned char swh[16] = {CA_SWH0, CA_SWH1, CA_SWH2, CA_SWH3};
-        unsigned char rse[16] = {CA_RSE0, CA_RSE1, CA_RSE2, CA_RSE3};
-        unsigned char swv[16] = {CA_SWV0, CA_SWV1, CA_SWV2, CA_SWV3};
-        unsigned char prp[16] = {CA_PRP0, CA_PRP1, CA_PRP2, CA_PRP3};
-        unsigned char xyz[16] = {CA_X0, CA_X1, CA_Y0, CA_Y1, CA_Y2, CA_Y3, CA_Z0, CA_Z1};
+        int portserver = 4207; /* 服务器（主控）端口 */
+        int portclient = 4201; /* 客户端（手持）端口 */
+        char *addrserver = "192.168.100.130"; /* 服务器地址 */
+        char *addrgroup = "234.1.1.9"; /* 组播地址 */
+        int can[8] = {0xD1000, 0xD3000, 0xD5000, 0xD7000}; /* CAN总线基地址表 */
+        int irq[8] = {5, 7, 11, 12}; /* CAN总线中断号表 */
+        unsigned char tls[16] = {CA_TLS0, CA_TLS1}; /* 倾角传感器CAN地址表 */
+        unsigned char vsl[16] = {CA_VSL0, CA_VSL1}; /* 视觉定位CAN地址表 */
+        unsigned char psu[16] = {CA_PSU}; /* 供电单元CAN地址表 */
+        unsigned char swh[16] = {CA_SWH0, CA_SWH1, CA_SWH2, CA_SWH3}; /* 横展CAN地址表 */
+        unsigned char rse[16] = {CA_RSE0, CA_RSE1, CA_RSE2, CA_RSE3}; /* 顶升CAN地址表 */
+        unsigned char swv[16] = {CA_SWV0, CA_SWV1, CA_SWV2, CA_SWV3}; /* 俯仰CAN地址表 */
+        unsigned char prp[16] = {CA_PRP0, CA_PRP1, CA_PRP2, CA_PRP3}; /* 垂直CAN地址表 */
+        unsigned char xyz[16] = {CA_X0, CA_X1, CA_Y0, CA_Y1, CA_Y2, CA_Y3, CA_Z0, CA_Z1}; /* 三轴转载机构CAN地址表 */
         unsigned char shd[16] = {
                 CA_SHDF0, CA_SHDF1, CA_SHDF2, CA_SHDF3,
                 CA_SHDB0, CA_SHDB1, CA_SHDB2, CA_SHDB3,
                 CA_SHDS0, CA_SHDS1, CA_SHDS2, CA_SHDS3
-        };
-        unsigned char mom[16] = {CA_MOM0, CA_MOM1, CA_MOM2, CA_MOM3};
+        }; /* 防护棚CAN地址表 */
+        unsigned char mom[16] = {CA_MOM0, CA_MOM1, CA_MOM2, CA_MOM3}; /* 恒力矩CAN地址表 */
         server.sin_len = (u_char)size;
         server.sin_family = AF_INET;
         server.sin_port = htons(portserver);
@@ -108,9 +108,9 @@ void tz(void)
         msg_shd = msgQCreate(128, 8, MSG_Q_FIFO);
         msg_mom = msgQCreate(128, 8, MSG_Q_FIFO);
         msg_gen = msgQCreate(128, 8, MSG_Q_FIFO);
-        lstLibInit();
-        ecu_init();
-        sysClkRateSet(100);
+        lstLibInit(); /* 双向链表功能初始化 */
+        ecu_init(); /* 初始化各CAN节点索引及消息队列 */
+        sysClkRateSet(100); /* 设置系统调用时间片 */
         tid_core = taskSpawn("CORE", 99, VX_FP_TASK, 20000, (FUNCPTR)t_core, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         tid_udpr = taskSpawn("UDPR", 90, VX_FP_TASK, 200000, (FUNCPTR)t_udpr, sfd, 10, 100, 0, 0, 0, 0, 0, 0, 0);
         tid_udpt = taskSpawn("UDPT", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpt, sfd, portclient, (int)addrgroup, 10, 0, 0, 0, 0, 0, 0);
