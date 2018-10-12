@@ -7,16 +7,16 @@ extern struct data sys_data;
 
 void t_udpr(int sfd, int period, int duration)
 {
+        int i;
+        int size = sizeof(struct sockaddr_in);
+        int len = sizeof(struct cmd) - sizeof(NODE);
+        struct sockaddr_in server;
+        struct cmd buf[duration];
+        struct cmd *p;
         struct {
                 int tid;
                 struct cmd *p;
         } send;
-        int size = sizeof(struct sockaddr_in);
-        int len = sizeof(struct cmd) - sizeof(NODE);
-        int i;
-        struct sockaddr_in server;
-        struct cmd buf[duration];
-        struct cmd *p;
         LIST lst;
         lstInit(&lst);
         for (i = 0; i < duration; i++)
