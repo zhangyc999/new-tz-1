@@ -22,6 +22,14 @@ extern MSG_Q_ID msg_prp;
 extern MSG_Q_ID msg_xyz;
 extern MSG_Q_ID msg_shd;
 extern MSG_Q_ID msg_mom;
+extern unsigned ev_core_vsl;
+extern unsigned ev_core_swh;
+extern unsigned ev_core_rse;
+extern unsigned ev_core_swv;
+extern unsigned ev_core_prp;
+extern unsigned ev_core_xyz;
+extern unsigned ev_core_shd;
+extern unsigned ev_core_mom;
 extern struct data sys_data;
 
 void t_core(int period)
@@ -69,91 +77,137 @@ void t_core(int period)
         } recv;
         struct {
                 int tid;
-                struct cmd cmd;
+                struct cmd *p;
         } send;
+        struct cmd cmd;
         send.tid = taskIdSelf();
-        send.cmd.src = 0xcc;
-        send.cmd.dev = CMD_DEV_PSU;
-        send.cmd.mode = CMD_MODE_STUPID;
-        send.cmd.act = CMD_ACT_PSU_ON;
-        send.cmd.data.psu.toggle
-        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        send.p = &cmd;
+        cmd.src = 0xcc;
+        cmd.dev = CMD_DEV_PSU;
+        cmd.mode = CMD_MODE_V24;
+        /* 开始：四支腿（共12个节点）开机自检 */
+        cmd.act = CMD_ACT_PSU_ON;
+        cmd.data.psu.toggle.leg0 = 1;
+        cmd.data.psu.toggle.leg1 = 1;
+        cmd.data.psu.toggle.leg2 = 1;
+        cmd.data.psu.toggle.leg3 = 1;
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        stamp = tickGet();
         taskResume(tid_swh);
         taskResume(tid_swv);
         taskResume(tid_prp);
-        taskDelay(100);
+        eventReceive(ev_core_swh | ev_core_swv | ev_core_prp, EVENTS_WAIT_ALL, 200, NULL);
         taskSuspend(tid_swh);
         taskSuspend(tid_swv);
         taskSuspend(tid_prp);
-        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        cmd.act = CMD_ACT_PSU_OFF;
+        if (tickGet() - stamp < period)
+                taskDelay(period - tickGet() + stamp);
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskDelay(period);
+        /* 结束：四支腿（共12个节点）开机自检 */
+        /* 开始：三轴转载机构（共8个节点）开机自检 */
+        cmd.act = CMD_ACT_PSU_ON;
+        cmd.data.psu.toggle.leg0 = 0;
+        cmd.data.psu.toggle.leg1 = 0;
+        cmd.data.psu.toggle.leg2 = 0;
+        cmd.data.psu.toggle.leg3 = 0;
+        cmd.data.psu.toggle.xyzb = 1;
+        cmd.data.psu.toggle.xyzf = 1;
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        stamp = tickGet();
         taskResume(tid_xyz);
-        taskDelay(100);
+        eventReceive(ev_core_xyz, EVENTS_WAIT_ALL, 200, NULL);
         taskSuspend(tid_xyz);
-        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        cmd.act = CMD_ACT_PSU_OFF;
+        if (tickGet() - stamp < period)
+                taskDelay(period - tickGet() + stamp);
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskDelay(period);
+        /* 结束：三轴转载机构（共8个节点）开机自检 */
+        /* 开始：防护棚（共12个节点）开机自检 */
+        cmd.act = CMD_ACT_PSU_ON;
+        cmd.data.psu.toggle.xyzb = 0;
+        cmd.data.psu.toggle.xyzf = 0;
+        cmd.data.psu.toggle.shdb = 1;
+        cmd.data.psu.toggle.shdf = 1;
+        cmd.data.psu.toggle.shst = 1;
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        stamp = tickGet();
         taskResume(tid_shd);
-        taskDelay(100);
+        eventReceive(ev_core_shd, EVENTS_WAIT_ALL, 200, NULL);
         taskSuspend(tid_shd);
-        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        cmd.act = CMD_ACT_PSU_OFF;
+        if (tickGet() - stamp < period)
+                taskDelay(period - tickGet() + stamp);
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskDelay(period);
+        /* 结束：防护棚（共12个节点）开机自检 */
+        /* 开始：恒力矩、顶升、视觉定位（共4+4+2个节点）开机自检 */
+        cmd.act = CMD_ACT_PSU_ON;
+        cmd.data.psu.toggle.shdb = 0;
+        cmd.data.psu.toggle.shdf = 0;
+        cmd.data.psu.toggle.shst = 0;
+        cmd.data.psu.toggle.mom = 1;
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        stamp = tickGet();
         taskResume(tid_mom);
-        taskDelay(100);
-        taskSuspend(tid_mom);
-        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskResume(tid_rse);
         taskResume(tid_vsl);
-        taskDelay(100);
+        eventReceive(ev_core_mom | ev_core_rse | ev_core_vsl, EVENTS_WAIT_ALL, 1000, NULL);
+        taskSuspend(tid_mom);
+        taskSuspend(tid_rse);
         taskSuspend(tid_vsl);
+        cmd.act = CMD_ACT_PSU_OFF;
+        if (tickGet() - stamp < period)
+                taskDelay(period - tickGet() + stamp);
+        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskDelay(period);
+        /* 结束：恒力矩、顶升、视觉定位（共4+4+2个节点）开机自检 */
+        cmd.data.psu.toggle.mom = 0;
         sys_data.misc.boot = 1;
         for (;;) {
                 if (8 == msgQReceive(msg_core, (char *)&recv, 8, period)) {
                         switch (recv.p->dev) {
                         case CMD_DEV_TLS:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_tls, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_VSL:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_vsl, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_PSU:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_SWH:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_RSE:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_SWV:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_PRP:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_XYZ:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_SHD:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_SRV_ALL:
-                                send.cmd = *recv.p;
-                                send.cmd.src = 0xec;
+                                cmd = *recv.p;
                                 msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);

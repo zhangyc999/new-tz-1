@@ -48,6 +48,14 @@ MSG_Q_ID msg_xyz; /* 三轴转载机构消息队列ID */
 MSG_Q_ID msg_shd; /* 防护棚消息队列ID */
 MSG_Q_ID msg_mom; /* 恒力矩消息队列ID */
 MSG_Q_ID msg_gen; /* 发电机消息队列ID */
+unsigned ev_core_vsl = VXEV01; /* 视觉定位开机自检正常事件编号 */
+unsigned ev_core_swh = VXEV02; /* 横展开机自检正常事件编号 */
+unsigned ev_core_rse = VXEV03; /* 顶升开机自检正常事件编号 */
+unsigned ev_core_swv = VXEV04; /* 俯仰开机自检正常事件编号 */
+unsigned ev_core_prp = VXEV05; /* 垂直开机自检正常事件编号 */
+unsigned ev_core_xyz = VXEV06; /* 三轴转载机构开机自检正常事件编号 */
+unsigned ev_core_shd = VXEV07; /* 防护棚开机自检正常事件编号 */
+unsigned ev_core_mom = VXEV08; /* 恒力矩开机自检正常事件编号 */
 struct data sys_data; /* 系统当前状态信息 */
 struct ecu sys_ecu[256]; /* 各CAN节点索引及消息队列（CAN通信任务->相应子任务）*/
 

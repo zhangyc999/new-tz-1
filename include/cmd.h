@@ -93,24 +93,7 @@ struct cmd {
                                 unsigned char xyzf: 1; /* 前三轴转载机构 */
                                 unsigned char : 1;
                                 unsigned char res[4];
-                        } v24; /* 24V开关 */
-                        struct {
-                                unsigned char : 8;
-                                unsigned char : 8;
-                                unsigned char mom: 1; /* 恒力矩 */
-                                unsigned char shdb: 1; /* 后端帘 */
-                                unsigned char shdf: 1; /* 前端帘 */
-                                unsigned char : 5;
-                                unsigned char shdst: 1; /* 侧帘/纵展 */
-                                unsigned char leg0: 1; /* 左前支腿 */
-                                unsigned char leg3: 1; /* 右前支腿 */
-                                unsigned char leg1: 1; /* 左后支腿 */
-                                unsigned char leg2: 1; /* 右后支腿 */
-                                unsigned char xyzb: 1; /* 后三轴转载机构 */
-                                unsigned char xyzf: 1; /* 前三轴转载机构 */
-                                unsigned char : 1;
-                                unsigned char res[4];
-                        } v500; /* 500V开关 */
+                        } toggle; /* 开关 */
                 } psu; /* 供电单元 */
                 union {
                         struct {
