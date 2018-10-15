@@ -93,7 +93,24 @@ struct cmd {
                                 unsigned char xyzf: 1; /* 前三轴转载机构 */
                                 unsigned char : 1;
                                 unsigned char res[4];
-                        } toggle; /* 开关 */
+                        } v24; /* 24V开关 */
+                        struct {
+                                unsigned char : 8;
+                                unsigned char : 8;
+                                unsigned char mom: 1; /* 恒力矩 */
+                                unsigned char shdb: 1; /* 后端帘 */
+                                unsigned char shdf: 1; /* 前端帘 */
+                                unsigned char : 5;
+                                unsigned char shdst: 1; /* 侧帘/纵展 */
+                                unsigned char leg0: 1; /* 左前支腿 */
+                                unsigned char leg3: 1; /* 右前支腿 */
+                                unsigned char leg1: 1; /* 左后支腿 */
+                                unsigned char leg2: 1; /* 右后支腿 */
+                                unsigned char xyzb: 1; /* 后三轴转载机构 */
+                                unsigned char xyzf: 1; /* 前三轴转载机构 */
+                                unsigned char : 1;
+                                unsigned char res[4];
+                        } v500; /* 500V开关 */
                 } psu; /* 供电单元 */
                 union {
                         struct {
@@ -149,13 +166,16 @@ struct cmd {
 #define CMD_DEV_GEN HAMMING_74(0xb) /* 0xb4：发电机 */
 #define CMD_SRV_ALL HAMMING_74(0xc) /* 0xc6：所有伺服 */
 
-#define CMD_MODE_RELAX  HAMMING_74(0x1) /* 0x1e：降级使用 */
-#define CMD_MODE_STUPID HAMMING_74(0x2) /* 0x26：自动模式 */
-#define CMD_MODE_MANUAL HAMMING_74(0x3) /* 0x38：手动模式 */
-#define CMD_MODE_EXPERT HAMMING_74(0x4) /* 0x4a：专家模式 */
-#define CMD_MODE_PASSWD HAMMING_74(0x5) /* 0x54：密码 */
-#define CMD_MODE_ZERO   HAMMING_74(0x6) /* 0x6c：标零 */
-#define CMD_MODE_SAVE   HAMMING_74(0x7) /* 0x72：保存 */
+#define CMD_MODE_RELAX      HAMMING_74(0x1) /* 0x1e：降级使用 */
+#define CMD_MODE_VSL_PHOTO  HAMMING_74(0x2) /* 0x26：拍照 */
+#define CMD_MODE_PSU_V24    HAMMING_74(0x3) /* 0x38：24V开关 */
+#define CMD_MODE_PSU_V500   HAMMING_74(0x4) /* 0x4a：500V开关 */
+#define CMD_MODE_SRV_STUPID HAMMING_74(0x5) /* 0x54：自动模式 */
+#define CMD_MODE_SRV_MANUAL HAMMING_74(0x6) /* 0x6c：手动模式 */
+#define CMD_MODE_SRV_EXPERT HAMMING_74(0x7) /* 0x72：专家模式 */
+#define CMD_MODE_SRV_PASSWD HAMMING_74(0x8) /* 0x8c：密码 */
+#define CMD_MODE_SRV_ZERO   HAMMING_74(0x9) /* 0x92：标零 */
+#define CMD_MODE_SRV_SAVE   HAMMING_74(0xa) /* 0xaa：保存 */
 
 #define CMD_ACT_VSL_GET   HAMMING_74(0x1) /* 0x1e：吊载 */
 #define CMD_ACT_VSL_PUT   HAMMING_74(0x2) /* 0x26：转载 */

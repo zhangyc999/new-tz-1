@@ -149,10 +149,11 @@ struct data {
         } srv[41]; /* 伺服驱动器 */
         unsigned ts; /* 时标 单位： 10ms */
         struct {
-                unsigned char bus0: 1; /* 总线0负载率 */
-                unsigned char bus1: 1; /* 总线1负载率 */
-                unsigned char : 6;
-        } fault; /* 故障 0/1：负载率正常/过高 */
+                unsigned char bus0: 1; /* 0/1：总线0负载率正常/过高 */
+                unsigned char bus1: 1; /* 0/1：总线1负载率正常/过高 */
+                unsigned char boot: 1; /* 0/1：开机自检进行中/结束 */
+                unsigned char : 5;
+        } misc; /* 杂项 */
         unsigned char res[2];
         unsigned char chk; /* 校验 */
 };

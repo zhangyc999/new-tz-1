@@ -22,15 +22,10 @@ extern MSG_Q_ID msg_prp;
 extern MSG_Q_ID msg_xyz;
 extern MSG_Q_ID msg_shd;
 extern MSG_Q_ID msg_mom;
-extern DATA sys_data;
-extern ECU sys_ecu[256];
+extern struct data sys_data;
 
 void t_core(int period)
 {
-        struct {
-                int tid;
-                CMD *p;
-        } recv, send;
         unsigned char swh0 = 0;
         unsigned char swh1 = 1;
         unsigned char swh2 = 2;
@@ -68,6 +63,10 @@ void t_core(int period)
         unsigned char mom1 = 38;
         unsigned char mom2 = 39;
         unsigned char mom3 = 40;
+        struct {
+                int tid;
+                struct cmd *p;
+        } recv, send;
         send.tid = taskIdSelf();
         for (;;) {
                 if (sys_data.psu.v24.leg0 && sys_data.psu.v500.leg0 &&
