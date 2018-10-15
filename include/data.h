@@ -151,7 +151,7 @@ struct data {
         struct {
                 unsigned char bus0: 1; /* 0/1：总线0负载率正常/过高 */
                 unsigned char bus1: 1; /* 0/1：总线1负载率正常/过高 */
-                unsigned char boot: 1; /* 0/1：开机自检进行中/结束 */
+                unsigned char boot: 1; /* 0/1：开机自检进行中/完成 */
                 unsigned char : 5;
         } misc; /* 杂项 */
         unsigned char res[2];

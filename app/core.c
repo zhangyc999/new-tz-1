@@ -143,7 +143,7 @@ void t_core(int period)
         msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
         taskDelay(period);
         /* 结束：防护棚（共12个节点）开机自检 */
-        /* 开始：恒力矩、顶升、视觉定位（共4+4+2个节点）开机自检 */
+        /* 开始：恒力矩、顶升（共4+4个节点）开机自检 */
         cmd.act = CMD_ACT_PSU_ON;
         cmd.data.psu.toggle.shdb = 0;
         cmd.data.psu.toggle.shdf = 0;
@@ -153,18 +153,21 @@ void t_core(int period)
         stamp = tickGet();
         taskResume(tid_mom);
         taskResume(tid_rse);
-        taskResume(tid_vsl);
-        eventReceive(ev_core_mom | ev_core_rse | ev_core_vsl, EVENTS_WAIT_ALL, 1000, NULL);
+        eventReceive(ev_core_mom | ev_core_rse, EVENTS_WAIT_ALL, 200, NULL);
         taskSuspend(tid_mom);
         taskSuspend(tid_rse);
-        taskSuspend(tid_vsl);
         cmd.act = CMD_ACT_PSU_OFF;
         if (tickGet() - stamp < period)
                 taskDelay(period - tickGet() + stamp);
         msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
         taskDelay(period);
-        /* 结束：恒力矩、顶升、视觉定位（共4+4+2个节点）开机自检 */
         cmd.data.psu.toggle.mom = 0;
+        /* 结束：恒力矩、顶升（共4+4个节点）开机自检 */
+        /* 开始：视觉定位（共2个节点）开机自检 */
+        taskResume(tid_vsl);
+        eventReceive(ev_core_vsl, EVENTS_WAIT_ALL, 1000, NULL);
+        taskSuspend(tid_vsl);
+        /* 结束：视觉定位（共2个节点）开机自检 */
         sys_data.misc.boot = 1;
         for (;;) {
                 if (8 == msgQReceive(msg_core, (char *)&recv, 8, period)) {
