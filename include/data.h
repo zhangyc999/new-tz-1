@@ -19,9 +19,9 @@ struct data {
                         unsigned char : 6;
                         unsigned char dev: 2; /* 硬件故障 */
                 } fault; /*故障 0/1/2/3：正常/警告/一般故障/严重故障*/
-                short p; /* 俯仰倾角 */
-                short r; /* 横滚倾角 */
-                unsigned ts; /* 时标 */
+                short p; /* 俯仰倾角 单位：0.001度 */
+                short r; /* 横滚倾角 单位：0.001度 */
+                unsigned ts; /* 时标 单位：10ms */
         } tls[2]; /* 倾角传感器 */
         struct {
                 struct {
@@ -40,10 +40,10 @@ struct data {
                 } fault; /* 故障 0/1/2/3：正常/警告/一般故障/严重故障 */
                 unsigned char res;
                 unsigned char proc; /* 阶段 */
-                short x; /* X轴测量值 */
-                short y; /* Y轴测量值 */
-                short z; /* Z轴测量值 */
-                unsigned ts; /* 时标 */
+                short x; /* X轴测量值 单位：0.1mm */
+                short y; /* Y轴测量值 单位： 0.1mm */
+                short z; /* Z轴测量值 单位： 0.1mm */
+                unsigned ts; /* 时标 单位： 10ms */
         } vsl[2]; /* 视觉定位 */
         struct {
                 struct {
@@ -82,8 +82,8 @@ struct data {
                         unsigned char xyzb: 1; /* 后三轴转载机构 */
                         unsigned char xyzf: 1; /* 前三轴转载机构 */
                         unsigned char : 1;
-                        unsigned short volt; /* 电压值 */
-                        unsigned short ampr; /* 电流值 */
+                        unsigned short volt; /* 电压值 单位： 0.01V */
+                        unsigned short ampr; /* 电流值 单位： 0.01A */
                 } v24; /* 24V */
                 struct {
                         unsigned char : 8;
@@ -100,10 +100,10 @@ struct data {
                         unsigned char xyzb: 1; /* 后三轴转载机构 */
                         unsigned char xyzf: 1; /* 前三轴转载机构 */
                         unsigned char : 1;
-                        unsigned short volt; /* 电压值 */
-                        unsigned short ampr; /* 电流值 */
+                        unsigned short volt; /* 电压值 单位： 0.01V */
+                        unsigned short ampr; /* 电流值 单位： 0.01A */
                 } v500; /* 500V */
-                unsigned ts; /* 时标 */
+                unsigned ts; /* 时标 单位： 10ms */
         } psu; /* 供电单元 */
         struct {
                 struct {
@@ -142,12 +142,12 @@ struct data {
                 } misc; /* 其他 */
                 unsigned char res[3];
                 unsigned char err; /* 驱动器故障代码 */
-                short pos; /* 位置 */
-                short vel; /* 速度 */
-                short ampr; /* 电流 */
-                unsigned ts; /* 时标 */
+                short pos; /* 位置 单位： 0.2mm */
+                short vel; /* 速度 单位： 0.01mm/s */
+                short ampr; /* 电流 单位： 0.01A */
+                unsigned ts; /* 时标 单位： 10ms */
         } srv[41]; /* 伺服驱动器 */
-        unsigned ts; /* 时标 */
+        unsigned ts; /* 时标 单位： 10ms */
         struct {
                 unsigned char bus0: 1; /* 总线0负载率 */
                 unsigned char bus1: 1; /* 总线1负载率 */
