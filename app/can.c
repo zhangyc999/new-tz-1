@@ -120,10 +120,10 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                 if (delta < duration - 10) { /* 缓冲累积时间小于10s */
                                         switch (i) {
                                         case 0:
-                                                sys_data.fault.bus0 = 1; /* 总线0负载率过高 */
+                                                sys_data.misc.bus0 = 1; /* 总线0负载率过高 */
                                                 break;
                                         case 1:
-                                                sys_data.fault.bus1 = 1; /* 总线1负载录过高 */
+                                                sys_data.misc.bus1 = 1; /* 总线1负载录过高 */
                                                 break;
                                         default:
                                                 break;
@@ -131,10 +131,10 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                 } else if (delta > duration + 10) { /* 缓冲累积时间大于10s */
                                         switch (i) {
                                         case 0:
-                                                sys_data.fault.bus0 = 0; /* 总线0负载率正常 */
+                                                sys_data.misc.bus0 = 0; /* 总线0负载率正常 */
                                                 break;
                                         case 1:
-                                                sys_data.fault.bus1 = 0; /* 总线1负载率正常 */
+                                                sys_data.misc.bus1 = 0; /* 总线1负载率正常 */
                                                 break;
                                         default:
                                                 break;
@@ -143,10 +143,10 @@ void t_can(int addr, int irq, int n, int period, int duration)
                         } else {
                                 switch (i) {
                                 case 0:
-                                        sys_data.fault.bus0 = 0; /* 总线0负载率正常 */
+                                        sys_data.misc.bus0 = 0; /* 总线0负载率正常 */
                                         break;
                                 case 1:
-                                        sys_data.fault.bus1 = 0; /* 总线1负载率正常 */
+                                        sys_data.misc.bus1 = 0; /* 总线1负载率正常 */
                                         break;
                                 default:
                                         break;

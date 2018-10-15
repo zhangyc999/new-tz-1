@@ -29,11 +29,13 @@ void t_udpr(int sfd, int period, int duration)
         send.tid = taskIdSelf();
         for (;;) {
                 taskDelay(period); /* 延时 */
-                if (len != recvfrom(sfd, (char *)&p->head, len, 0, (struct sockaddr *)&server, &size)) /* 套接字缓冲为空 */
+                if (len != recvfrom(sfd, (char *)&p->head, len, 0, (struct sockaddr *)&server, &size)) { /* 套接字缓冲为空 */
+                        /* timeout */
                         continue;
+                }
                 while (len == recvfrom(sfd, (char *)&p->head, len, 0, (struct sockaddr *)&server, &size)) /* 获取套接字缓冲最新数据并拷贝到缓冲链表中 */
                         ;
-                if (p->head == 0xeeee && p->len == len) { /* 帧头和帧长度都正确 */
+                if (p->head == 0xeeee && p->len == len && p->src == 0xec) { /* 帧头、帧长度和数据源都正确 */
                         p->ts = tickGet(); /* 打上时标 */
                         send.p = p;
                         msgQSend(msg_core, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到主任务 */
