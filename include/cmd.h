@@ -135,18 +135,18 @@ struct cmd {
                                 unsigned pick; /* 选择 */
                         } stupid; /* 自动模式 */
                         struct {
-                                short vel; /* 速度 单位： 0.01mm/s */
+                                short vel; /* 速度 单位：0.01mm/s */
                                 unsigned char res[2];
                                 unsigned pick; /* 选择 */
                         } manual; /* 手动模式 */
                         struct {
-                                short vel; /* 速度 单位： 0.01mm/s */
+                                short vel; /* 速度 单位：0.01mm/s */
                                 unsigned char res[2];
                                 unsigned pick; /* 选择 */
                         } expert; /* 专家模式 */
                 } srv; /* 伺服驱动器 */
         } data; /* 数据 */
-        unsigned ts; /* 时标 单位： 10ms */
+        unsigned ts; /* 时标 单位：10ms */
         unsigned char res[3];
         unsigned char chk; /* 校验 */
 };
