@@ -66,156 +66,107 @@ void t_core(int period)
         struct {
                 int tid;
                 struct cmd *p;
-        } recv, send;
+        } recv;
+        struct {
+                int tid;
+                struct cmd cmd;
+        } send;
         send.tid = taskIdSelf();
+        send.cmd.src = 0xcc;
+        send.cmd.dev = CMD_DEV_PSU;
+        send.cmd.mode = CMD_MODE_STUPID;
+        send.cmd.act = CMD_ACT_PSU_ON;
+        send.cmd.data.psu.toggle
+        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskResume(tid_swh);
+        taskResume(tid_swv);
+        taskResume(tid_prp);
+        taskDelay(100);
+        taskSuspend(tid_swh);
+        taskSuspend(tid_swv);
+        taskSuspend(tid_prp);
+        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskResume(tid_xyz);
+        taskDelay(100);
+        taskSuspend(tid_xyz);
+        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskResume(tid_shd);
+        taskDelay(100);
+        taskSuspend(tid_shd);
+        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskResume(tid_mom);
+        taskDelay(100);
+        taskSuspend(tid_mom);
+        msgQSend(msg_psu, /*(char *)&send*/, 8, NO_WAIT, MSG_PRI_NORMAL);
+        taskResume(tid_vsl);
+        taskDelay(100);
+        taskSuspend(tid_vsl);
+        sys_data.misc.boot = 1;
         for (;;) {
-                if (sys_data.psu.v24.leg0 && sys_data.psu.v500.leg0 &&
-                    sys_data.psu.v24.leg1 && sys_data.psu.v500.leg1 &&
-                    sys_data.psu.v24.leg2 && sys_data.psu.v500.leg2 &&
-                    sys_data.psu.v24.leg3 && sys_data.psu.v500.leg3) {
-                        taskResume(tid_swh);
-                        taskResume(tid_swv);
-                        taskResume(tid_prp);
+                if (8 == msgQReceive(msg_core, (char *)&recv, 8, period)) {
+                        switch (recv.p->dev) {
+                        case CMD_DEV_TLS:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_tls, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_VSL:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_vsl, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_PSU:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_SWH:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_RSE:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_SWV:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_PRP:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_XYZ:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_DEV_SHD:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        case CMD_SRV_ALL:
+                                send.cmd = *recv.p;
+                                send.cmd.src = 0xec;
+                                msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                break;
+                        default:
+                                break;
+                        }
                 } else {
-                        taskSuspend(tid_swh);
-                        taskSuspend(tid_swv);
-                        taskSuspend(tid_prp);
-                        if (!sys_data.psu.v24.leg0) {
-                                memset(&sys_data.srv[swh0].fault, 0, 4);
-                                memset(&sys_data.srv[swv0].fault, 0, 4);
-                                memset(&sys_data.srv[prp0].fault, 0, 4);
-                        }
-                        if (!sys_data.psu.v24.leg1) {
-                                memset(&sys_data.srv[swh1].fault, 0, 4);
-                                memset(&sys_data.srv[swv1].fault, 0, 4);
-                                memset(&sys_data.srv[prp1].fault, 0, 4);
-                        }
-                        if (!sys_data.psu.v24.leg2) {
-                                memset(&sys_data.srv[swh2].fault, 0, 4);
-                                memset(&sys_data.srv[swv2].fault, 0, 4);
-                                memset(&sys_data.srv[prp2].fault, 0, 4);
-                        }
-                        if (!sys_data.psu.v24.leg3) {
-                                memset(&sys_data.srv[swh3].fault, 0, 4);
-                                memset(&sys_data.srv[swv3].fault, 0, 4);
-                                memset(&sys_data.srv[prp3].fault, 0, 4);
-                        }
+                        /* timeout */
                 }
-        }
-        if (sys_data.psu.v24.xyzf && sys_data.psu.v500.xyzf &&
-            sys_data.psu.v24.xyzb && sys_data.psu.v500.xyzb) {
-                taskResume(tid_xyz);
-        } else {
-                taskSuspend(tid_xyz);
-                if (!sys_data.psu.v24.xyzf) {
-                        memset(&sys_data.srv[x0].fault, 0, 4);
-                        memset(&sys_data.srv[y0].fault, 0, 4);
-                        memset(&sys_data.srv[y1].fault, 0, 4);
-                        memset(&sys_data.srv[z0].fault, 0, 4);
-                }
-                if (!sys_data.psu.v24.xyzb) {
-                        memset(&sys_data.srv[x1].fault, 0, 4);
-                        memset(&sys_data.srv[y2].fault, 0, 4);
-                        memset(&sys_data.srv[y3].fault, 0, 4);
-                        memset(&sys_data.srv[z1].fault, 0, 4);
-                }
-        }
-        if (sys_data.psu.v24.shdf && sys_data.psu.v500.shdf ||
-            sys_data.psu.v24.shdb && sys_data.psu.v500.shdb ||
-            sys_data.psu.v24.shdst && sys_data.psu.v500.shdst)
-                taskResume(tid_shd);
-        else
-                taskSuspend(tid_shd);
-        if (!sys_data.psu.v24.shdf) {
-                memset(&sys_data.srv[shdf0].fault, 0, 4);
-                memset(&sys_data.srv[shdf1].fault, 0, 4);
-                memset(&sys_data.srv[shdf2].fault, 0, 4);
-                memset(&sys_data.srv[shdf3].fault, 0, 4);
-        }
-        if (!sys_data.psu.v24.shdb) {
-                memset(&sys_data.srv[shdb0].fault, 0, 4);
-                memset(&sys_data.srv[shdb1].fault, 0, 4);
-                memset(&sys_data.srv[shdb2].fault, 0, 4);
-                memset(&sys_data.srv[shdb3].fault, 0, 4);
-        }
-        if (!sys_data.psu.v24.shdst) {
-                memset(&sys_data.srv[shdt].fault, 0, 4);
-                memset(&sys_data.srv[shds0].fault, 0, 4);
-                memset(&sys_data.srv[shds1].fault, 0, 4);
-                memset(&sys_data.srv[shds2].fault, 0, 4);
-                memset(&sys_data.srv[shds3].fault, 0, 4);
-        }
-        if (sys_data.psu.v24.mom && sys_data.psu.v500.mom) {
-                taskResume(tid_mom);
-        } else {
-                taskSuspend(tid_mom);
-                if (!sys_data.psu.v24.mom) {
-                        memset(&sys_data.srv[mom0].fault, 0, 4);
-                        memset(&sys_data.srv[mom1].fault, 0, 4);
-                        memset(&sys_data.srv[mom2].fault, 0, 4);
-                        memset(&sys_data.srv[mom3].fault, 0, 4);
-                }
-        }
-        if (8 == msgQReceive(msg_core, (char *)&recv, 8, period)) {
-                switch (recv.p->dev) {
-                case CMD_DEV_TLS:
-                        send.p = recv.p;
-                        msgQSend(msg_tls, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_VSL:
-                        send.p = recv.p;
-                        msgQSend(msg_vsl, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_psu, (char *)&send, 4, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_PSU:
-                        send.p = recv.p;
-                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_SWH:
-                        send.p = recv.p;
-                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_RSE:
-                        send.p = recv.p;
-                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_SWV:
-                        send.p = recv.p;
-                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_PRP:
-                        send.p = recv.p;
-                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_XYZ:
-                        send.p = recv.p;
-                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_DEV_SHD:
-                        send.p = recv.p;
-                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                case CMD_SRV_ALL:
-                        send.p = recv.p;
-                        msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                        break;
-                default:
-                        break;
-                }
-        } else {
-                /* timeout */
         }
 }
