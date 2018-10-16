@@ -149,12 +149,12 @@ struct data {
         } srv[41]; /* 伺服驱动器 */
         unsigned ts; /* 时标 单位：10ms */
         struct {
-                unsigned char bus0: 1; /* 0/1：总线0负载率正常/过高 */
-                unsigned char bus1: 1; /* 0/1：总线1负载率正常/过高 */
-                unsigned char boot: 1; /* 0/1：开机自检进行中/完成 */
-                unsigned char : 5;
+                unsigned char bus0: 2; /* 0/1/2：总线0负载率正常/警告/过高 */
+                unsigned char bus1: 2; /* 0/1/2：总线1负载率正常/警告/过高 */
+                unsigned char boot: 2; /* 0/1/2：开机自检未开始/进行中/完成 */
+                unsigned char : 2;
         } misc; /* 杂项 */
-        unsigned char online[2]; /* 总线在线节点数 */
+        unsigned char online[2]; /* 总线1s内待发送信息数量 */
         unsigned char chk; /* 校验 */
 };
 

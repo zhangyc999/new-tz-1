@@ -85,6 +85,7 @@ void t_core(int period)
         cmd.src = 0xcc;
         cmd.dev = CMD_DEV_PSU;
         cmd.mode = CMD_MODE_V24;
+        sys_data.misc.boot = 1;
         /* 开始：四支腿（共12个节点）开机自检 */
         cmd.act = CMD_ACT_PSU_ON;
         cmd.data.psu.toggle.leg0 = 1;
@@ -168,7 +169,7 @@ void t_core(int period)
         eventReceive(ev_core_vsl, EVENTS_WAIT_ALL, 1000, NULL);
         taskSuspend(tid_vsl);
         /* 结束：视觉定位（共2个节点）开机自检 */
-        sys_data.misc.boot = 1;
+        sys_data.misc.boot = 2;
         for (;;) {
                 if (8 == msgQReceive(msg_core, (char *)&recv, 8, period)) {
                         switch (recv.p->dev) {

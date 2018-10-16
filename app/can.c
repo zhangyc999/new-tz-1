@@ -69,7 +69,6 @@ void t_can(int addr, int irq, int n, int period, int duration)
 {
         int i, j; /* 循环变量 */
         unsigned char id[4]; /* 中间变量存储ID（29位ID左对齐）*/
-        unsigned delta; /* 缓冲链表累积时间差 */
         struct ext buf[8][duration]; /* CAN总线缓存数据及存储数量*/
         struct {
                 int tid; /* 数据来源的任务ID */
@@ -115,43 +114,43 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
                                 /* 结束：向总线发送数据 */
                         }
-                        if (sys_data.online[i] > 9) { /* 总线在线节点数量过多 */
+                        if (sys_data.online[i] > 90) { /* 总线待发送信息数量过多 */
                                 switch (i) {
                                 case 0:
-                                        sys_data.misc.bus0 = 1; /* 总线0负载率过高 */
+                                        sys_data.misc.bus0 = 2; /* 总线0负载率过高 */
                                         break;
                                 case 1:
-                                        sys_data.misc.bus1 = 1; /* 总线1负载录过高 */
+                                        sys_data.misc.bus1 = 2; /* 总线1负载率过高 */
                                         break;
                                 default:
                                         break;
                                 }
-                        } else if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts && p_can_rx[i]->ts) { /* 缓冲链表已满 */
-                                delta = ((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts - p_can_rx[i]->ts;
-                                if (delta < duration - 10) { /* 缓冲累积时间过小，链表填充速度过快 */
-                                        switch (i) {
-                                        case 0:
-                                                sys_data.misc.bus0 = 1; /* 总线0负载率过高 */
-                                                break;
-                                        case 1:
-                                                sys_data.misc.bus1 = 1; /* 总线1负载录过高 */
-                                                break;
-                                        default:
-                                                break;
-                                        }
-                                } else if (delta > duration + 10) {
-                                        switch (i) {
-                                        case 0:
-                                                sys_data.misc.bus0 = 0; /* 总线0负载率正常 */
-                                                break;
-                                        case 1:
-                                                sys_data.misc.bus1 = 0; /* 总线1负载率正常 */
-                                                break;
-                                        default:
-                                                break;
+                        } else if (sys_data.online[i] > 60 && sys_data.online < 80) { /* 总线待发送信息数量警告 */
+                                switch (i) {
+                                case 0:
+                                        sys_data.misc.bus0 = 1; /* 总线0负载率警告 */
+                                        break;
+                                case 1:
+                                        sys_data.misc.bus1 = 1; /* 总线1负载率警告 */
+                                        break;
+                                default:
+                                        break;
+                                }
+                                if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts && p_can_rx[i]->ts) { /* 缓冲链表已满 */
+                                        if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts - p_can_rx[i]->ts < duration) { /* 缓冲累积时间过小，链表填充速度过快 */
+                                                switch (i) {
+                                                case 0:
+                                                        sys_data.misc.bus0 = 2; /* 总线0负载率过高 */
+                                                        break;
+                                                case 1:
+                                                        sys_data.misc.bus1 = 2; /* 总线1负载率过高 */
+                                                        break;
+                                                default:
+                                                        break;
+                                                }
                                         }
                                 }
-                        } else {
+                        } else if (sys_data.online[i] < 50) { /* 总线待发送信息数量正常 */
                                 switch (i) {
                                 case 0:
                                         sys_data.misc.bus0 = 0; /* 总线0负载率正常 */
@@ -161,6 +160,20 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                         break;
                                 default:
                                         break;
+                                }
+                                if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts && p_can_rx[i]->ts) { /* 缓冲链表已满 */
+                                        if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts - p_can_rx[i]->ts < duration) { /* 缓冲累积时间过小，链表填充速度过快 */
+                                                switch (i) {
+                                                case 0:
+                                                        sys_data.misc.bus0 = 2; /* 总线0负载率过高 */
+                                                        break;
+                                                case 1:
+                                                        sys_data.misc.bus1 = 2; /* 总线1负载率过高 */
+                                                        break;
+                                                default:
+                                                        break;
+                                                }
+                                        }
                                 }
                         }
                 }
