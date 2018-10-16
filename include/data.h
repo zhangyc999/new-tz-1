@@ -154,7 +154,7 @@ struct data {
                 unsigned char boot: 1; /* 0/1：开机自检进行中/完成 */
                 unsigned char : 5;
         } misc; /* 杂项 */
-        unsigned char res[2];
+        unsigned char online[2]; /* 总线在线节点数 */
         unsigned char chk; /* 校验 */
 };
 

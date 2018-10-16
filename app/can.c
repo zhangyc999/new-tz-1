@@ -115,9 +115,20 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                 WRITE_REG_BYTE(ADDR(i), PELI_CMR, 0x01);
                                 /* 结束：向总线发送数据 */
                         }
-                        if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts && p_can_rx[i]->ts) { /* 缓冲链表已满 */
+                        if (sys_data.online[i] > 9) { /* 总线在线节点数量过多 */
+                                switch (i) {
+                                case 0:
+                                        sys_data.misc.bus0 = 1; /* 总线0负载率过高 */
+                                        break;
+                                case 1:
+                                        sys_data.misc.bus1 = 1; /* 总线1负载录过高 */
+                                        break;
+                                default:
+                                        break;
+                                }
+                        } else if (((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts && p_can_rx[i]->ts) { /* 缓冲链表已满 */
                                 delta = ((struct ext *)lstPrevious((NODE *)p_can_rx[i]))->ts - p_can_rx[i]->ts;
-                                if (delta < duration - 10) { /* 缓冲累积时间小于10s */
+                                if (delta < duration - 10) { /* 缓冲累积时间过小，链表填充速度过快 */
                                         switch (i) {
                                         case 0:
                                                 sys_data.misc.bus0 = 1; /* 总线0负载率过高 */
@@ -128,7 +139,7 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                         default:
                                                 break;
                                         }
-                                } else if (delta > duration + 10) { /* 缓冲累积时间大于10s */
+                                } else if (delta > duration + 10) {
                                         switch (i) {
                                         case 0:
                                                 sys_data.misc.bus0 = 0; /* 总线0负载率正常 */

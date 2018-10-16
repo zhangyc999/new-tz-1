@@ -3,6 +3,7 @@
 
 #include "vxWorks.h"
 
+#include "eventLib.h"
 #include "inetLib.h"
 #include "intLib.h"
 #include "ioLib.h"
