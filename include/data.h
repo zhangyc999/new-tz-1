@@ -139,7 +139,7 @@ struct data {
                         unsigned char loadp: 1; /* 正向带载 */
                         unsigned char loadn: 1; /* 反向带载 */
                         unsigned char lock: 1; /* 定位锁 */
-                } misc; /* 其他 */
+                } misc; /* 杂项 */
                 unsigned char res[3];
                 unsigned char err; /* 驱动器故障代码 */
                 short pos; /* 位置 单位：0.2mm */

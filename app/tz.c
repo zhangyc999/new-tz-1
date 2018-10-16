@@ -123,7 +123,7 @@ void tz(void)
         tid_udpr = taskSpawn("UDPR", 90, VX_FP_TASK, 200000, (FUNCPTR)t_udpr, sfd, 10, 100, 0, 0, 0, 0, 0, 0, 0);
         tid_udpt = taskSpawn("UDPT", 90, VX_FP_TASK, 20000, (FUNCPTR)t_udpt, sfd, portclient, (int)addrgroup, 10, 0, 0, 0, 0, 0, 0);
         tid_can = taskSpawn("CAN", 40, VX_FP_TASK, 200000, (FUNCPTR)t_can, (int)can, (int)irq, 2, 1, 1000, 0, 0, 0, 0, 0);
-        tid_tls = taskSpawn("TLS", 40, VX_FP_TASK, 20000, (FUNCPTR)t_tls, (int)tls, 2, 50, 10, 0, 0, 0, 0, 0, 0);
+        tid_tls = taskSpawn("TLS", 50, VX_FP_TASK, 20000, (FUNCPTR)t_tls, (int)tls, 2, 50, 10, 0, 0, 0, 0, 0, 0);
 }
 
 static void ecu_init(void)

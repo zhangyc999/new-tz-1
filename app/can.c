@@ -125,7 +125,7 @@ void t_can(int addr, int irq, int n, int period, int duration)
                                 default:
                                         break;
                                 }
-                        } else if (sys_data.online[i] > 60 && sys_data.online < 80) { /* 总线待发送信息数量警告 */
+                        } else if (sys_data.online[i] > 60 && sys_data.online[i] < 80) { /* 总线待发送信息数量警告 */
                                 switch (i) {
                                 case 0:
                                         sys_data.misc.bus0 = 1; /* 总线0负载率警告 */
