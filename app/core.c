@@ -338,6 +338,7 @@ void t_core(int period)
                                         swh = 0;
                                 }
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_RSE:
@@ -352,6 +353,7 @@ void t_core(int period)
                                         rse = 0;
                                 }
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 msgQSend(msg_rse, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_SWV:
@@ -367,6 +369,7 @@ void t_core(int period)
                                         swv = 0;
                                 }
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 msgQSend(msg_swv, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_PRP:
@@ -382,6 +385,7 @@ void t_core(int period)
                                         prp = 0;
                                 }
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 msgQSend(msg_prp, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_XYZ:
@@ -397,6 +401,7 @@ void t_core(int period)
                                         xyz = 0;
                                 }
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 msgQSend(msg_xyz, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_SHD:
@@ -412,6 +417,7 @@ void t_core(int period)
                                         shd = 0;
                                 }
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 msgQSend(msg_shd, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_DEV_MOM:
@@ -426,11 +432,13 @@ void t_core(int period)
                                         mom = 0;
                                 }
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 msgQSend(msg_mom, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 break;
                         case CMD_SRV_ALL:
                                 force = 0;
                                 cmd = *recv.p;
+                                cmd.src = 0xcc;
                                 if (!taskIsSuspended(tid_swh))
                                         msgQSend(msg_swh, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                 if (!taskIsSuspended(tid_rse))
