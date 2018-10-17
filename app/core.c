@@ -35,7 +35,8 @@ extern struct data sys_data;
 
 void t_core(int period)
 {
-        unsigned stamp;
+        unsigned stamp; /* 时标 */
+        /* 开始：子任务启动到挂起 */
         int swh = 0;
         int rse = 0;
         int swv = 0;
@@ -43,21 +44,24 @@ void t_core(int period)
         int xyz = 0;
         int shd = 0;
         int mom = 0;
-        int force = 0;
+        /* 开始：子任务启动到挂起 */
+        int force = 0; /* 强势操作供电单元 */
         struct {
-                int tid;
-                struct cmd *p;
+                int tid; /* UDP任务ID */
+                struct cmd *p; /* 接收数据首地址 */
         } recv;
         struct {
-                int tid;
-                struct cmd *p;
+                int tid; /* 任务自身ID */
+                struct cmd *p; /* 发送数据首地址 */
         } send;
+        /* 开始：读取24V电源命令 */
         struct cmd cmd;
-        send.tid = taskIdSelf();
+        send.tid = taskIdSelf(); /* 得到调用任务的ID */
         send.p = &cmd;
         cmd.src = 0xcc;
         cmd.dev = CMD_DEV_PSU;
         cmd.mode = CMD_MODE_PSU_V24;
+        /* 结束：读取24V电源命令 */
         sys_data.misc.boot = 1;
         /* 开始：四支腿（共12个节点）开机自检 */
         cmd.act = CMD_ACT_PSU_ON;
@@ -71,7 +75,7 @@ void t_core(int period)
         taskResume(tid_swh);
         taskResume(tid_swv);
         taskResume(tid_prp);
-        eventReceive(ev_core_swh | ev_core_swv | ev_core_prp, EVENTS_WAIT_ALL, 200, NULL);
+        eventReceive(ev_core_swh | ev_core_swv | ev_core_prp, EVENTS_WAIT_ALL, 200, NULL); /* 接收时间任务等待2s */
         taskSuspend(tid_swh);
         taskSuspend(tid_swv);
         taskSuspend(tid_prp);
@@ -139,15 +143,16 @@ void t_core(int period)
         /* 结束：视觉定位（共2个节点）开机自检 */
         sys_data.misc.boot = 2;
         for (;;) {
-                taskDelay(period);
+          taskDelay(period); /* 延时 */
                 if (!force) {
                         if (taskIsSuspended(tid_swh) &&
                             taskIsSuspended(tid_swv) &&
-                            taskIsSuspended(tid_prp)) {
+                            taskIsSuspended(tid_prp)) { /* 摆动、俯仰、垂直任务都挂起状态 */
                                 if (sys_data.psu.v500.leg0 ||
                                     sys_data.psu.v500.leg1 ||
                                     sys_data.psu.v500.leg2 ||
-                                    sys_data.psu.v500.leg3) {
+                                    sys_data.psu.v500.leg3) { /* 四支腿有一个500V打开状态 */
+                                        /* 开始：选择四支腿500V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V500;
                                         cmd.act = CMD_ACT_PSU_OFF;
@@ -156,13 +161,15 @@ void t_core(int period)
                                         cmd.data.psu.toggle.leg1 = 1;
                                         cmd.data.psu.toggle.leg2 = 1;
                                         cmd.data.psu.toggle.leg3 = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 结束：选择四支腿500V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
                                 if (sys_data.psu.v24.leg0 ||
                                     sys_data.psu.v24.leg1 ||
                                     sys_data.psu.v24.leg2 ||
-                                    sys_data.psu.v24.leg3) {
+                                    sys_data.psu.v24.leg3) { /* 四支腿有一个24V打开状态 */
+                                        /* 开始：选择四支腿24V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V24;
                                         cmd.act = CMD_ACT_PSU_OFF;
@@ -171,38 +178,44 @@ void t_core(int period)
                                         cmd.data.psu.toggle.leg1 = 1;
                                         cmd.data.psu.toggle.leg2 = 1;
                                         cmd.data.psu.toggle.leg3 = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 开始：选择四支腿24V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
                         }
-                        if (taskIsSuspended(tid_xyz)) {
+                        if (taskIsSuspended(tid_xyz)) { /* 三轴转载机构任务挂起 */
                                 if (sys_data.psu.v500.xyzb ||
-                                    sys_data.psu.v500.xyzf) {
+                                    sys_data.psu.v500.xyzf) { /* 前后三轴转载机构有一个500V打开状态 */
+                                        /* 开始：选择三轴转载机构500V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V500;
                                         cmd.act = CMD_ACT_PSU_OFF;
                                         memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
                                         cmd.data.psu.toggle.xyzb = 1;
                                         cmd.data.psu.toggle.xyzf = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 开始：选择三轴转载500V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
                                 if (sys_data.psu.v24.xyzb ||
-                                    sys_data.psu.v24.xyzf) {
+                                    sys_data.psu.v24.xyzf) { /* 前后三轴转载机构有一个24V打开状态 */
+                                        /* 开始：选择三轴转载机构24V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V24;
                                         cmd.act = CMD_ACT_PSU_OFF;
                                         memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
                                         cmd.data.psu.toggle.xyzb = 1;
                                         cmd.data.psu.toggle.xyzf = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 开始：选择三轴转载机构24V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
                         }
-                        if (taskIsSuspended(tid_shd)) {
+                        if (taskIsSuspended(tid_shd)) { /* 防护棚任务挂起 */
                                 if (sys_data.psu.v500.shdb ||
                                     sys_data.psu.v500.shdf ||
-                                    sys_data.psu.v500.shdst) {
+                                    sys_data.psu.v500.shdst) { /* 前端帘、后端帘、侧帘纵展有一个500V打开状态 */
+                                        /* 开始：选择防护棚500V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V500;
                                         cmd.act = CMD_ACT_PSU_OFF;
@@ -210,12 +223,14 @@ void t_core(int period)
                                         cmd.data.psu.toggle.shdb = 1;
                                         cmd.data.psu.toggle.shdf = 1;
                                         cmd.data.psu.toggle.shdst = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 开始：选择防护棚500V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
                                 if (sys_data.psu.v24.shdb ||
                                     sys_data.psu.v24.shdf ||
-                                    sys_data.psu.v24.shdst) {
+                                    sys_data.psu.v24.shdst) { /* 前端帘、后端帘、侧帘纵展有一个24V打开状态 */
+                                        /* 开始：选择防护棚24V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V24;
                                         cmd.act = CMD_ACT_PSU_OFF;
@@ -223,32 +238,38 @@ void t_core(int period)
                                         cmd.data.psu.toggle.shdb = 1;
                                         cmd.data.psu.toggle.shdf = 1;
                                         cmd.data.psu.toggle.shdst = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 开始：选择防护棚24V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
                         }
-                        if (taskIsSuspended(tid_mom)) {
-                                if (sys_data.psu.v500.mom) {
+                        if (taskIsSuspended(tid_mom)) { /* 恒力矩任务挂起 */
+                                if (sys_data.psu.v500.mom) { /* 恒力矩500V打开状态 */
+                                        /* 开始：选择恒力矩500V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V500;
                                         cmd.act = CMD_ACT_PSU_OFF;
                                         memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
                                         cmd.data.psu.toggle.mom = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 开始：选择恒力矩500V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
-                                if (sys_data.psu.v24.mom) {
+                                if (sys_data.psu.v24.mom) { /* 恒力矩24V打开状态 */
+                                        /* 开始：选择恒力矩24V开关并断电 */
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V24;
                                         cmd.act = CMD_ACT_PSU_OFF;
                                         memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
                                         cmd.data.psu.toggle.mom = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
+                                        /* 开始：选择恒力矩24V开关并断电 */
+                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL); /* 发送消息队列到供电单元 */
                                         continue;
                                 }
                         }
                 }
-                if (sys_data.misc.bus0 > 1 || sys_data.misc.bus1 > 1) {
+                if (sys_data.misc.bus0 > 1 || sys_data.misc.bus1 > 1) { /* 其中一个总线负载率过高 */
+                        /* 开始：挂起各子任务 */
                         taskSuspend(tid_swh);
                         taskSuspend(tid_rse);
                         taskSuspend(tid_swv);
@@ -256,8 +277,9 @@ void t_core(int period)
                         taskSuspend(tid_xyz);
                         taskSuspend(tid_shd);
                         taskSuspend(tid_mom);
-                } else if (8 == msgQReceive(msg_core, (char *)&recv, 8, NO_WAIT)) {
-                        switch (recv.p->dev) {
+                        /* 结束：挂起各子任务 */
+                } else if (8 == msgQReceive(msg_core, (char *)&recv, 8, NO_WAIT)) { /* 消息队列非空 */
+                        switch (recv.p->dev) { /* 选择哪个子任务 */
                         case CMD_DEV_TLS:
                                 force = 0;
                                 cmd = *recv.p;
@@ -275,14 +297,14 @@ void t_core(int period)
                                 break;
                         case CMD_DEV_SWH:
                                 force = 0;
-                                if (taskIsSuspended(tid_swh)) {
-                                        if (!swh) {
+                                if (taskIsSuspended(tid_swh)) { /* 挂起横展任务 */
+                                        if (!swh) { /* swh为0时 */
                                                 sys_data.online[0] += 20;
-                                                sys_data.online[1] += 20;
+                                                sys_data.online[1] += 20; /* 在总线发送20个待发送的信息数量 */
                                                 swh = 1;
                                                 continue;
                                         }
-                                        taskResume(tid_swh);
+                                        taskResume(tid_swh); /* 启动横展任务 */
                                         swh = 0;
                                 }
                                 cmd = *recv.p;

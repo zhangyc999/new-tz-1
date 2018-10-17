@@ -93,7 +93,7 @@ struct cmd {
                                 unsigned char xyzf: 1; /* 前三轴转载机构 */
                                 unsigned char : 1;
                                 unsigned char res[4];
-                        } toggle; /* 开关 */
+                        } toggle; /* 选择开关 */
                 } psu; /* 供电单元 */
                 union {
                         struct {
