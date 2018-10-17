@@ -174,22 +174,6 @@ void t_core(int period)
                                         msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                         continue;
                                 }
-                        } else {
-                                if (!sys_data.psu.v24.leg0 ||
-                                    !sys_data.psu.v24.leg1 ||
-                                    !sys_data.psu.v24.leg2 ||
-                                    !sys_data.psu.v24.leg3) {
-                                        cmd.dev = CMD_DEV_PSU;
-                                        cmd.mode = CMD_MODE_PSU_V24;
-                                        cmd.act = CMD_ACT_PSU_ON;
-                                        memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
-                                        cmd.data.psu.toggle.leg0 = 1;
-                                        cmd.data.psu.toggle.leg1 = 1;
-                                        cmd.data.psu.toggle.leg2 = 1;
-                                        cmd.data.psu.toggle.leg3 = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                                        continue;
-                                }
                         }
                         if (taskIsSuspended(tid_xyz)) {
                                 if (sys_data.psu.v500.xyzb ||
@@ -208,18 +192,6 @@ void t_core(int period)
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V24;
                                         cmd.act = CMD_ACT_PSU_OFF;
-                                        memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
-                                        cmd.data.psu.toggle.xyzb = 1;
-                                        cmd.data.psu.toggle.xyzf = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                                        continue;
-                                }
-                        } else {
-                                if (sys_data.psu.v24.xyzb ||
-                                    sys_data.psu.v24.xyzf) {
-                                        cmd.dev = CMD_DEV_PSU;
-                                        cmd.mode = CMD_MODE_PSU_V24;
-                                        cmd.act = CMD_ACT_PSU_ON;
                                         memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
                                         cmd.data.psu.toggle.xyzb = 1;
                                         cmd.data.psu.toggle.xyzf = 1;
@@ -254,20 +226,6 @@ void t_core(int period)
                                         msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
                                         continue;
                                 }
-                        } else {
-                                if (sys_data.psu.v24.shdb ||
-                                    sys_data.psu.v24.shdf ||
-                                    sys_data.psu.v24.shdst) {
-                                        cmd.dev = CMD_DEV_PSU;
-                                        cmd.mode = CMD_MODE_PSU_V24;
-                                        cmd.act = CMD_ACT_PSU_ON;
-                                        memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
-                                        cmd.data.psu.toggle.shdb = 1;
-                                        cmd.data.psu.toggle.shdf = 1;
-                                        cmd.data.psu.toggle.shdst = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                                        continue;
-                                }
                         }
                         if (taskIsSuspended(tid_mom)) {
                                 if (sys_data.psu.v500.mom) {
@@ -283,16 +241,6 @@ void t_core(int period)
                                         cmd.dev = CMD_DEV_PSU;
                                         cmd.mode = CMD_MODE_PSU_V24;
                                         cmd.act = CMD_ACT_PSU_OFF;
-                                        memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
-                                        cmd.data.psu.toggle.mom = 1;
-                                        msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
-                                        continue;
-                                }
-                        } else {
-                                if (sys_data.psu.v24.mom) {
-                                        cmd.dev = CMD_DEV_PSU;
-                                        cmd.mode = CMD_MODE_PSU_V24;
-                                        cmd.act = CMD_ACT_PSU_ON;
                                         memset(&cmd.data.psu.toggle, 0, sizeof(cmd.data.psu.toggle));
                                         cmd.data.psu.toggle.mom = 1;
                                         msgQSend(msg_psu, (char *)&send, 8, NO_WAIT, MSG_PRI_NORMAL);
